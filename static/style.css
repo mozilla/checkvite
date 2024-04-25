@@ -1,0 +1,60 @@
+.image-grid {
+  display: grid;
+  /* Ensure exactly three columns, each taking 1/3 of the available width minus the grid gap */
+  grid-template-columns: repeat(3, calc(33.333% - (2 * 10px / 3)));
+  gap: 10px;
+  padding: 10px;
+}
+
+.image-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #f9f9f9; /* Light grey background */
+  border: 1px solid #ddd; /* Light grey border */
+  border-radius: 5px;
+  padding: 5px;
+}
+
+.image {
+  max-width: 100%;
+  height: auto;
+  border-radius: 5px;
+}
+
+header {
+  display: flex; /* Enables flexbox */
+  align-items: center; /* Aligns items vertically in the center */
+  justify-content: center; /* Centers items horizontally */
+  text-align: center; /* Centers the text inside the flex item, if needed */
+}
+
+.loader {
+  display: inline-block; /* Makes the span behave like a block for styling */
+  width: 10px; /* Diameter of the loader */
+  height: 10px; /* Diameter of the loader */
+  border-radius: 50%; /* Makes the span perfectly circular */
+  border: 2px solid #f3f3f3; /* Light grey border, covers the entire circumference */
+  border-top: 2px solid #3498db; /* Blue segment at the top */
+  animation: spin 2s linear infinite; /* Continuous rotation animation */
+}
+
+/* Keyframes to create the spinning effect */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  } /* Start position */
+  100% {
+    transform: rotate(360deg);
+  } /* End position (full rotation) */
+}
+
+.caption-container {
+  //text-align: center;
+  padding: 5px;
+}
+
+.caption {
+  font-size: 14px;
+  color: #333;
+}

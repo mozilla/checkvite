@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <title>PDF.js model tweaking</title>
+    <script src="/static/index.js"></script>
+    <link href="/static/style.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/chota@latest" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="card" style="margin-top: 15px; margin-bottom: 15px">
+        <header>
+          <img src="/static/moz.svg" style="height: 30px"/>&nbsp;PDF.js Model tweaking. Model v0.1
+        </header>
+
+        Trainging Stats
+        <ul>
+          <li>Number of images: {{ total_images }}</li>
+          <li>Number of images re-trained: {{ retrained_images }}</li>
+          <li>Number of images marked as good: {{ good_images }}</li>
+          <li>Number of custom images added: {{ custom_images }}</li>
+        </ul>
+
+        <ul>
+          <li><span class="tag">human</span> captioned by a person</li>
+          <!--
+          <li>
+            <span class="tag">large</span> captioned using Microsoft's git-large
+          </li>
+          -->
+          <li>
+            <span class="tag">pdf</span> captioned using PDF.js current model
+          </li>
+        </ul>
+
+        <p>
+          For each image, you can flag the PDF.js model as incorrect and provide
+          a new caption. Each flagged image will be added to a new dataset to
+          fine-tune the model.
+        </p>
+        <p>
+          You can also add a custom image, check the inference done with it and
+          flag it as incorrect and provide a new caption.
+        </p>
+        <p>
+          When an image is added to the dataset, you will find it in the
+          validation page to check the result once the model has be trained with
+          it.
+        </p>
+        <footer class="is-right">
+          <button
+            class="button primary"
+            id="generate-button"
+            onclick="location.reload()"
+          >
+            <span id="button-text">Load new images</span>
+          </button>
+        </footer>
+      </div>
+
+  {% for row in range(1, 4) %}  <!-- Creates three rows -->
+    <div class="row">
+      {% for col in range(1, 4) %}  <!-- Creates three columns per row -->
+        <div id="image{{ (row - 1) * 3 + col }}" class="col-4">
+          <form action="#">
+          <p>Train with the caption below, or mark it as OK
+          <input type="text" id="caption{{ (row - 1) * 3 + col }}"></input>
+          </p>
+          <footer class="is-right">
+            <a id="fail_{{ (row - 1) * 3 + col }}" class="button error">Train</a>
+            <a id="success_{{ (row - 1) * 3 + col }}" class="button success">Discard</a>
+          </footer>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  </body>
+</html>
