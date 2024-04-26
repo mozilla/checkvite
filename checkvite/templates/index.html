@@ -13,7 +13,7 @@
           <img src="/static/moz.svg" style="height: 30px"/>&nbsp;PDF.js Model tweaking. Model v0.1
         </header>
 
-        Trainging Stats
+        Training Stats
         <ul>
           <li>Number of images: {{ total_images }}</li>
           <li>Number of images re-trained: {{ retrained_images }}</li>
@@ -58,17 +58,27 @@
         </footer>
       </div>
 
+  {% if message %}
+  <div class="row">
+  <div class="col-12">
+  <h4>{{message}}</h4>
+  </div>
+  </div>
+  {% endif %}
+
   {% for row in range(1, 4) %}  <!-- Creates three rows -->
     <div class="row">
       {% for col in range(1, 4) %}  <!-- Creates three columns per row -->
         <div id="image{{ (row - 1) * 3 + col }}" class="col-4">
-          <form action="#">
+          <form action="/train" method="POST" enctype="application/x-www-form-urlencoded">
           <p>Train with the caption below, or mark it as OK
-          <input type="text" id="caption{{ (row - 1) * 3 + col }}"></input>
+          <input type="text" name="caption" id="caption{{ (row - 1) * 3 + col }}" required></input>
+          <input id="image_id{{ (row - 1) * 3 + col }}" type="hidden" name="image_id" value=""/>
+          <input id="dataset{{ (row - 1) * 3 + col }}" type="hidden" name="dataset" value=""/>
           </p>
           <footer class="is-right">
-            <a id="fail_{{ (row - 1) * 3 + col }}" class="button error">Train</a>
-            <a id="success_{{ (row - 1) * 3 + col }}" class="button success">Discard</a>
+            <button name="train" type="submit" id="fail_{{ (row - 1) * 3 + col }}" class="button error">Train</a>
+            <button name="discard" type="submit" id="success_{{ (row - 1) * 3 + col }}" class="button success">Discard</a>
           </footer>
           </form>
         </div>

@@ -1,13 +1,18 @@
 from io import BytesIO
-from aiohttp import web
 import os
 import random
 
+from aiohttp_session import setup, get_session
+from aiohttp_session.cookie_storage import EncryptedCookieStorage
+from aiohttp import web
 import jinja2
 import aiohttp_jinja2
 from datasets import load_dataset
 from transformers import pipeline
 
+from checkvite.db import ImageCaptionDataset
+
+SECRET_KEY = "nYzdi-LJ4aqGqvCF28Yt2kVpWiGrWniBFLAGLPtRcx4="
 
 HERE = os.path.dirname(__file__)
 
@@ -80,15 +85,35 @@ async def get_random_images(request):
 @routes.get("/")
 @aiohttp_jinja2.template("index.html")
 async def index(request):
+    session = await get_session(request)
+
     return {
         "retrained_images": 0,
         "good_images": 0,
         "custom_images": 0,
+        "message": session.pop("message", ""),
         "total_images": sum(len(dataset) for dataset in datasets.values()),
     }
 
 
+@routes.post("/train")
+async def handle_train(request):
+    data = await request.post()
+    session = await get_session(request)
+
+    action = "train" if "train" in data.keys() else "discard"
+    if action == "train":
+        session["message"] = f"Training with caption: {data['caption']}"
+        # XXX todo : store the image+caption in the ImageCaptionDataset
+    else:
+        # XXX todo : store the image id into a list of images we don't want to see anymore
+        session["message"] = "Caption discarded"
+
+    raise web.HTTPFound("/")  # Redirect to the root
+
+
 app = web.Application()
+setup(app, EncryptedCookieStorage(SECRET_KEY))
 app.add_routes(routes)
 app.add_routes(
     [
@@ -101,6 +126,9 @@ aiohttp_jinja2.setup(
 )
 
 
-# Run the web application
-if __name__ == "__main__":
+def main():
     web.run_app(app)
+
+
+if __name__ == "__main__":
+    main()

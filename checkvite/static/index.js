@@ -84,6 +84,9 @@ async function fetchImages() {
     container.insertBefore(imageBlock, container.firstChild);
 
     container.insertBefore(img, container.firstChild);
+
+    document.getElementById(`image_id${index + 1}`).value = imageData.image_id;
+    document.getElementById(`dataset${index + 1}`).value = imageData.dataset;
   });
 
   // Wait for all images to load
