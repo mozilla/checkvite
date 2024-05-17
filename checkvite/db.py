@@ -1,6 +1,8 @@
 import os
 import shutil
 import io
+import sqlite3
+from datetime import datetime
 
 from PIL import Image
 import asyncio
@@ -16,6 +18,7 @@ from datasets import (
 
 HERE = os.path.dirname(__file__)
 DEFAULT_DS_PATH = os.path.join(HERE, "pdfjs")
+DEFAULT_STORE_PATH = os.path.join(HERE, "pdfjs.db")
 
 
 FEATURES = Features(
@@ -35,6 +38,104 @@ EMPTY_DATA = {
     "origin_split": [],
     "origin_id": [],
 }
+
+
+class ImageCaptionDataStore:
+    def __init__(self, db_path=DEFAULT_STORE_PATH):
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS records (
+                image_id INTEGER NOT NULL,
+                origin TEXT NOT NULL,
+                caption TEXT,
+                valid BOOLEAN default 0,
+                custom BOOLEAN default 0,
+                to_train BOOLEAN,
+                trained BOOLEAN DEFAULT 0,
+                trained_at DATETIME,
+                PRIMARY KEY (image_id, origin)
+            )
+        """
+        )
+        self.conn.commit()
+
+    def add(self, image_id, origin, caption, valid, to_train, custom=False):
+        try:
+            self.cursor.execute(
+                """
+                INSERT INTO records (image_id, origin, caption, valid, to_train, custom)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """,
+                (image_id, origin, caption, valid, to_train, custom),
+            )
+            self.conn.commit()
+        except sqlite3.IntegrityError:
+            print(
+                "Error: The combination of Image ID and Origin already exists, which must be unique."
+            )
+
+    def delete(self, origin, image_id):
+        self.cursor.execute(
+            """
+            DELETE FROM records WHERE origin = ? AND image_id = ?
+        """,
+            (origin, image_id),
+        )
+        self.conn.commit()
+
+    def find(self, origin, image_id, discard_valid=False):
+        if discard_valid:
+            self.cursor.execute(
+                """
+                SELECT * FROM records WHERE origin = ? AND image_id = ? AND valid = 0
+            """,
+                (origin, image_id),
+            )
+            return self.cursor.fetchone()
+        else:
+            self.cursor.execute(
+                """
+                SELECT * FROM records WHERE origin = ? AND image_id = ? AND valid = 1
+            """,
+                (origin, image_id),
+            )
+        return self.cursor.fetchone()
+
+    def update_training_status(self, origin, image_id, trained, trained_at=None):
+        trained_at = (
+            trained_at or datetime.now()
+        )  # Update with current time if not provided
+        self.cursor.execute(
+            """
+            UPDATE records SET trained = ?, trained_at = ? WHERE origin = ? AND image_id = ?
+        """,
+            (trained, trained_at, origin, image_id),
+        )
+        self.conn.commit()
+
+    def counters(self):
+        self.cursor.execute(
+            "SELECT COUNT(*), SUM(to_train), SUM(trained), SUM(valid), SUM(custom) FROM records"
+        )
+        (
+            total,
+            to_train_count,
+            trained_count,
+            valid_count,
+            custom_count,
+        ) = self.cursor.fetchone()
+        return {
+            "total": total,
+            "to_train": to_train_count,
+            "trained": trained_count,
+            "valid": valid_count,
+            "custom": custom_count,
+        }
+
+    def close(self):
+        self.conn.close()
 
 
 class ImageCaptionDataset:
