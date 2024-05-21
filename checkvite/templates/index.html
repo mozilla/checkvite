@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>PDF.js model tweaking</title>
-    <script src="/static/index.js"></script>
+    <script src="/static/index.js" type="module"></script>
     <link href="/static/style.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/chota@latest" />
   </head>
@@ -13,11 +13,10 @@
     <a class="brand" href="#"><img src="/static/moz.svg" style="height: 30px"/>PDF.js alt text</a>
 
     <div class="tabs">
-      <a class="button outline tablinks active" onclick="openTab(event, 'to_verify')">To Verify</a>
-      <a class="button outline tablinks" onclick="openTab(event, 'verified')">Verified</a>
-      <a class="button outline tablinks" onclick="openTab(event, 'to_train')">To train</a>
-      <a class="button outline tablinks" onclick="openTab(event, 'stats')">Stats</a>
-
+      <a id="tab_to_verify" class="button outline tablinks active">To Verify</a>
+      <a id="tab_verified" class="button outline tablinks">Verified</a>
+      <a id="tab_to_train" class="button outline tablinks">To train</a>
+      <a id="tab_stats" class="button outline tablinks">Stats</a>
     </div>
   </div>
 </nav>
@@ -39,7 +38,7 @@
         <div id="image{{ (row - 1) * 3 + col }}" class="col-4">
           <form action="/train" method="POST" enctype="application/x-www-form-urlencoded">
           <p>Train with the caption below, or mark it as OK
-          <input type="text" name="caption" id="caption{{ (row - 1) * 3 + col }}" required></input>
+          <input type="text" name="caption" id="caption{{ (row - 1) * 3 + col }}"></input>
           <input id="image_id{{ (row - 1) * 3 + col }}" type="hidden" name="image_id" value=""/>
           </p>
           <footer class="is-right">
@@ -61,7 +60,7 @@
         <div id="a_image{{ (row - 1) * 3 + col }}" class="col-4">
           <form action="/train" method="POST" enctype="application/x-www-form-urlencoded">
           <p>Train with the caption below, or mark it as OK
-          <input type="text" name="caption" id="a_caption{{ (row - 1) * 3 + col }}" required></input>
+          <input type="text" name="caption" id="a_caption{{ (row - 1) * 3 + col }}"></input>
           <input id="a_image_id{{ (row - 1) * 3 + col }}" type="hidden" name="image_id" value=""/>
           </p>
           <footer class="is-right">
@@ -81,7 +80,7 @@
       {% for col in range(1, 4) %}  <!-- Creates three columns per row -->
         <div id="t_image{{ (row - 1) * 3 + col }}" class="col-4
           <form action="/train" method="POST" enctype="application/x-www-form-urlencoded">          <p>Train with the caption below, or mark it as OK
-          <input type="text" name="caption" id="t_caption{{ (row - 1) * 3 + col }}" required></input>
+          <input type="text" name="caption" id="t_caption{{ (row - 1) * 3 + col }}"></input>
           <input id="t_image_id{{ (row - 1) * 3 + col }}" type="hidden" name="image_id" value=""/>
           </p>
 

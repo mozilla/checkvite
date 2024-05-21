@@ -59,12 +59,14 @@ IMAGE_IDS = list(BY_ID.keys())
 
 routes = web.RouteTableDef()
 
-captioners = {
-    "large": pipeline("image-to-text", model="microsoft/git-large"),
-    "pdf": pipeline(
-        "image-to-text", model="tarekziade/vit-base-patch16-224-in21k-distilgpt2"
-    ),
-}
+
+# captioners = {
+#    "large": pipeline("image-to-text", model="microsoft/git-large"),
+#    "pdf": pipeline(
+#        "image-to-text", model="tarekziade/vit-base-patch16-224-in21k-distilgpt2"
+#    ),
+# }
+captioners = {}
 
 
 TO_BE_SAVED = False
