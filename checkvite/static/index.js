@@ -4,8 +4,8 @@ function taggedText(tag, text) {
   return captionDiv;
 }
 
-function fetchCaption(captioner, dataset, image_id) {
-  const apiUrl = `/infere/${captioner}/${dataset}/${image_id}`;
+function fetchCaption(captioner, image_id) {
+  const apiUrl = `/infere/${captioner}/${image_id}`;
 
   return fetch(apiUrl)
     .then((response) => {
@@ -20,13 +20,13 @@ function fetchCaption(captioner, dataset, image_id) {
     });
 }
 
-function displayCaption(captioner, dataset, image_id, idx, class_prefix = "") {
+function displayCaption(captioner, image_id, idx, class_prefix = "") {
   // Create a new div element for the caption and set a loading message
   div = document.createElement("div");
   div.innerHTML = `<span class='tag'>${captioner}</span>&nbsp;<span class="loader"></span>`;
   div.id = `${class_prefix}caption${captioner}${image_id}`;
 
-  fetchCaption(captioner, dataset, image_id)
+  fetchCaption(captioner, image_id)
     .then((text) => {
       console.log(text);
       const container = document.getElementById(
@@ -80,7 +80,7 @@ async function fetchImages() {
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
 
-    const humanCaption = taggedText("Human", imageData.caption);
+    const humanCaption = taggedText("Human", imageData.alt_text);
     captionDiv.appendChild(humanCaption);
 
     imageBlock.appendChild(captionDiv);
@@ -89,7 +89,6 @@ async function fetchImages() {
     container.insertBefore(img, container.firstChild);
 
     document.getElementById(`image_id${index + 1}`).value = imageData.image_id;
-    document.getElementById(`dataset${index + 1}`).value = imageData.dataset;
   });
 
   // Wait for all images to load
@@ -105,18 +104,84 @@ async function fetchImages() {
 
     /*
     captionContainer.appendChild(
-      displayCaption("large", imageData.dataset, imageData.image_id),
+      displayCaption("large", imageData.image_id),
     );
     */
 
     captionContainer.appendChild(
-      displayCaption("pdf", imageData.dataset, imageData.image_id, index + 1),
+      displayCaption("pdf", imageData.image_id, index + 1),
     );
   });
 }
 
-async function fetchAdversarialImages() {
-  const response = await fetch("/get_adversarial_images");
+async function fetchNeedTrainingImages() {
+  const response = await fetch("/get_images?need_training=true");
+  const data = await response.json();
+
+  // Create an array to hold promises that resolve when each image loads
+  const loadPromises = [];
+
+  data.forEach((imageData, index) => {
+    if (index >= 9) return; // Only process the first 9 images
+
+    const container = document.getElementById(`t_image${index + 1}`);
+    const imageBlock = document.createElement("div");
+    imageBlock.className = "image-block";
+
+    // Create an image element
+    const img = document.createElement("img");
+    img.src = imageData.image_url;
+    img.className = "image";
+
+    // Create a promise that resolves when the image is loaded
+    const imageLoadPromise = new Promise((resolve) => {
+      img.onload = () => {
+        resolve();
+      };
+    });
+    loadPromises.push(imageLoadPromise);
+
+    // Create a div element to hold the captions after images have loaded
+    const captionDiv = document.createElement("div");
+    captionDiv.className = "caption-container";
+
+    const humanCaption = taggedText("Human", imageData.alt_text);
+    captionDiv.appendChild(humanCaption);
+
+    imageBlock.appendChild(captionDiv);
+    container.insertBefore(imageBlock, container.firstChild);
+
+    container.insertBefore(img, container.firstChild);
+
+    document.getElementById(`t_image_id${index + 1}`).value =
+      imageData.image_id;
+  });
+
+  // Wait for all images to load
+  await Promise.all(loadPromises);
+
+  // After all images have loaded, start loading captions
+  data.forEach((imageData, index) => {
+    if (index >= 9) return;
+
+    const captionContainer = document
+      .getElementById(`t_image${index + 1}`)
+      .querySelector(".caption-container");
+
+    /*
+    captionContainer.appendChild(
+      displayCaption("large", imageData.image_id),
+    );
+    */
+
+    captionContainer.appendChild(
+      displayCaption("pdf", imageData.image_id, index + 1, "a_"),
+    );
+  });
+}
+
+async function fetchVerifiedImages() {
+  const response = await fetch("/get_images?verified=true");
   const data = await response.json();
 
   // Create an array to hold promises that resolve when each image loads
@@ -146,7 +211,7 @@ async function fetchAdversarialImages() {
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
 
-    const humanCaption = taggedText("Human", imageData.caption);
+    const humanCaption = taggedText("Human", imageData.alt_text);
     captionDiv.appendChild(humanCaption);
 
     imageBlock.appendChild(captionDiv);
@@ -156,7 +221,6 @@ async function fetchAdversarialImages() {
 
     document.getElementById(`a_image_id${index + 1}`).value =
       imageData.image_id;
-    document.getElementById(`a_dataset${index + 1}`).value = imageData.dataset;
   });
 
   // Wait for all images to load
@@ -172,24 +236,19 @@ async function fetchAdversarialImages() {
 
     /*
     captionContainer.appendChild(
-      displayCaption("large", imageData.dataset, imageData.image_id),
+      displayCaption("large", imageData.image_id),
     );
     */
 
     captionContainer.appendChild(
-      displayCaption(
-        "pdf",
-        imageData.dataset,
-        imageData.image_id,
-        index + 1,
-        "a_",
-      ),
+      displayCaption("pdf", imageData.image_id, index + 1, "a_"),
     );
   });
 }
 
 fetchImages();
-fetchAdversarialImages();
+fetchVerifiedImages();
+fetchNeedTrainingImages();
 
 function openTab(evt, tabName) {
   var i, tabcontent, tablinks;
