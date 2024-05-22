@@ -70,7 +70,7 @@ function taggedText(tag, text) {
   return captionDiv;
 }
 
-function displayCaption(captioner, image_id, idx, class_prefix = "") {
+function displayCaption(captioner, image_id, class_prefix = "") {
   var div = document.createElement("div");
   div.id = `${class_prefix}caption${captioner}${image_id}`;
   var button = document.createElement("button");
@@ -153,12 +153,10 @@ async function fetchImages() {
     if (index >= 9) return;
 
     const captionContainer = document
-      .getElementById(`image${index + 1}`)
+      .getElementById(`image${start + index}`)
       .querySelector(".caption-container");
 
-    captionContainer.appendChild(
-      displayCaption("pdf", imageData.image_id, index + 1),
-    );
+    captionContainer.appendChild(displayCaption("pdf", imageData.image_id));
   });
 }
 
