@@ -137,15 +137,19 @@ async def infere(request):
 
 @routes.get("/get_images")
 async def get_random_images(request):
-    if request.query.get("verified") is not None:
+    tab = request.query.get("tab", "to_verify")
+
+    if tab == "to_verify":
+        verified = 0
+        need_training = 0
+    elif tab == "verified":
         verified = 1
+        need_training = 0
     else:
         verified = 0
-
-    if request.query.get("need_training") is not None:
         need_training = 1
-    else:
-        need_training = 0
+
+    batch = int(request.query.get("batch", 1))
 
     images = list(BY_ID.values())
     # images.sort(key=lambda x: x["image_id"])
@@ -163,7 +167,9 @@ async def get_random_images(request):
         )
     )
 
-    picked = images[:9]
+    start = (batch - 1) * 9
+    end = start + 9
+    picked = images[start:end]
 
     return web.json_response(picked)
 
@@ -172,10 +178,14 @@ async def get_random_images(request):
 @aiohttp_jinja2.template("index.html")
 async def index(request):
     session = await get_session(request)
+    tab = request.query.get("tab", "to_verify")
+    batch = request.query.get("batch", 1)
 
     return {
+        "batch": int(batch),
         "message": session.pop("message", ""),
         "total_images": len(DS),
+        "tab": tab,
     }
 
 
@@ -201,7 +211,10 @@ async def handle_train(request):
 
     BY_ID[image_id] = row
     save_to_disk()
-    raise web.HTTPFound("/")  # Redirect to the root
+    tab = request.query.get("tab", "to_verify")
+    batch = request.query.get("batch", 1)
+
+    raise web.HTTPFound(f"/?tab={tab}&batch={batch}")  # Redirect to the root
 
 
 @routes.post("/upload")
@@ -234,7 +247,7 @@ async def handle_upload(request):
     # Update IMAGE_IDS list
     IMAGE_IDS.insert(0, new_image_id)
     save_to_disk()
-    raise web.HTTPFound("/")  # Redirect to the root
+    raise web.HTTPFound(f"/?tab=to_verify&batch=1")  # Redirect to the root
 
 
 async def start_app(app):

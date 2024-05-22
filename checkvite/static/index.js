@@ -1,5 +1,11 @@
 import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers";
 
+const url = new URL(window.location);
+const params = new URLSearchParams(url.search);
+const tabName = params.get("tab") || "to_verify";
+let batch = parseInt(params.get("batch") || 1);
+let start = 1 + (batch - 1) * 9;
+
 function blurTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
@@ -93,7 +99,7 @@ function displayCaption(captioner, image_id, idx, class_prefix = "") {
 }
 
 async function fetchImages() {
-  const response = await fetch("/get_images");
+  const response = await fetch(`/get_images?batch=${batch}&tab=${tabName}`);
   const data = await response.json();
 
   // Create an array to hold promises that resolve when each image loads
@@ -101,8 +107,12 @@ async function fetchImages() {
 
   data.forEach((imageData, index) => {
     if (index >= 9) return; // Only process the first 9 images
+    console.log(start);
+    console.log(index);
 
-    const container = document.getElementById(`image${index + 1}`);
+    const container = document.getElementById(`image${start + index}`);
+    console.log(container);
+
     const imageBlock = document.createElement("div");
     imageBlock.className = "image-block";
 
@@ -131,7 +141,8 @@ async function fetchImages() {
 
     container.insertBefore(img, container.firstChild);
 
-    document.getElementById(`image_id${index + 1}`).value = imageData.image_id;
+    document.getElementById(`image_id${start + index}`).value =
+      imageData.image_id;
   });
 
   // Wait for all images to load
@@ -145,171 +156,23 @@ async function fetchImages() {
       .getElementById(`image${index + 1}`)
       .querySelector(".caption-container");
 
-    /*
-      captionContainer.appendChild(
-        displayCaption("large", imageData.image_id),
-      );
-      */
-
     captionContainer.appendChild(
       displayCaption("pdf", imageData.image_id, index + 1),
     );
   });
 }
 
-async function fetchNeedTrainingImages() {
-  const response = await fetch("/get_images?need_training=true");
-  const data = await response.json();
-
-  // Create an array to hold promises that resolve when each image loads
-  const loadPromises = [];
-
-  data.forEach((imageData, index) => {
-    if (index >= 9) return; // Only process the first 9 images
-
-    const container = document.getElementById(`t_image${index + 1}`);
-    const imageBlock = document.createElement("div");
-    imageBlock.className = "image-block";
-
-    // Create an image element
-    const img = document.createElement("img");
-    img.src = imageData.image_url;
-    img.className = "image";
-
-    // Create a promise that resolves when the image is loaded
-    const imageLoadPromise = new Promise((resolve) => {
-      img.onload = () => {
-        resolve();
-      };
-    });
-    loadPromises.push(imageLoadPromise);
-
-    // Create a div element to hold the captions after images have loaded
-    const captionDiv = document.createElement("div");
-    captionDiv.className = "caption-container";
-
-    const humanCaption = taggedText("Human", imageData.alt_text);
-    captionDiv.appendChild(humanCaption);
-
-    imageBlock.appendChild(captionDiv);
-    container.insertBefore(imageBlock, container.firstChild);
-
-    container.insertBefore(img, container.firstChild);
-
-    document.getElementById(`t_image_id${index + 1}`).value =
-      imageData.image_id;
-  });
-
-  // Wait for all images to load
-  await Promise.all(loadPromises);
-
-  // After all images have loaded, start loading captions
-  data.forEach((imageData, index) => {
-    if (index >= 9) return;
-
-    const captionContainer = document
-      .getElementById(`t_image${index + 1}`)
-      .querySelector(".caption-container");
-
-    /*
-      captionContainer.appendChild(
-        displayCaption("large", imageData.image_id),
-      );
-      */
-
-    captionContainer.appendChild(
-      displayCaption("pdf", imageData.image_id, index + 1, "a_"),
-    );
-  });
-}
-
-async function fetchVerifiedImages() {
-  const response = await fetch("/get_images?verified=true");
-  const data = await response.json();
-
-  // Create an array to hold promises that resolve when each image loads
-  const loadPromises = [];
-
-  data.forEach((imageData, index) => {
-    if (index >= 9) return; // Only process the first 9 images
-
-    const container = document.getElementById(`a_image${index + 1}`);
-    const imageBlock = document.createElement("div");
-    imageBlock.className = "image-block";
-
-    // Create an image element
-    const img = document.createElement("img");
-    img.src = imageData.image_url;
-    img.className = "image";
-
-    // Create a promise that resolves when the image is loaded
-    const imageLoadPromise = new Promise((resolve) => {
-      img.onload = () => {
-        resolve();
-      };
-    });
-    loadPromises.push(imageLoadPromise);
-
-    // Create a div element to hold the captions after images have loaded
-    const captionDiv = document.createElement("div");
-    captionDiv.className = "caption-container";
-
-    const humanCaption = taggedText("Human", imageData.alt_text);
-    captionDiv.appendChild(humanCaption);
-
-    imageBlock.appendChild(captionDiv);
-    container.insertBefore(imageBlock, container.firstChild);
-
-    container.insertBefore(img, container.firstChild);
-
-    document.getElementById(`a_image_id${index + 1}`).value =
-      imageData.image_id;
-  });
-
-  // Wait for all images to load
-  await Promise.all(loadPromises);
-
-  // After all images have loaded, start loading captions
-  data.forEach((imageData, index) => {
-    if (index >= 9) return;
-
-    const captionContainer = document
-      .getElementById(`a_image${index + 1}`)
-      .querySelector(".caption-container");
-
-    /*
-      captionContainer.appendChild(
-        displayCaption("large", imageData.image_id),
-      );
-      */
-
-    captionContainer.appendChild(
-      displayCaption("pdf", imageData.image_id, index + 1, "a_"),
-    );
-  });
-}
-
 fetchImages();
-fetchVerifiedImages();
-fetchNeedTrainingImages();
 clearBlurOnTabContents();
 
 function openTab(evt, tabName) {
-  console.log("openTab: ", tabName);
-
-  var i, tabcontent, tablinks;
-  tabcontent = document.getElementsByClassName("tabcontent");
-  for (i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
-  }
-
-  tablinks = document.getElementsByClassName("tablinks");
-  for (i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
-  }
-
-  document.getElementById(tabName).style.display = "block";
-  evt.currentTarget.className += " active";
+  var url = new URL(window.location);
+  var params = new URLSearchParams(url.search);
+  var batch = parseInt(params.get("batch") || 1);
+  params.set("tab", tabName);
+  params.set("batch", batch);
+  url.search = params.toString();
+  window.location.href = url.toString();
 }
 
 document
@@ -382,18 +245,45 @@ function updateImageDisplay() {
   }
 }
 
-const imageInput = document.getElementById("image");
-const imagePreview = document.getElementById("imagePreview");
+if (tabName === "stats") {
+  const imageInput = document.getElementById("image");
+  const imagePreview = document.getElementById("imagePreview");
 
-imageInput.addEventListener("change", function() {
-  const file = this.files[0];
-  if (file) {
-    imagePreview.src = URL.createObjectURL(file);
-    imagePreview.style.display = "block"; // Make sure to show the image element
-    imagePreview.onload = function() {
-      URL.revokeObjectURL(imagePreview.src); // Free up memory
-    };
+  imageInput.addEventListener("change", function() {
+    const file = this.files[0];
+    if (file) {
+      imagePreview.src = URL.createObjectURL(file);
+      imagePreview.style.display = "block"; // Make sure to show the image element
+      imagePreview.onload = function() {
+        URL.revokeObjectURL(imagePreview.src); // Free up memory
+      };
+    }
+  });
+
+  updateProgressBar();
+}
+
+function changeBatch(direction) {
+  var url = new URL(window.location);
+  var params = new URLSearchParams(url.search);
+
+  var tab = params.get("tab") || "to_verify";
+  var batch = parseInt(params.get("batch") || 1);
+  batch += direction;
+  if (batch < 1) {
+    batch = 1;
   }
-});
 
-updateProgressBar();
+  params.set("tab", tab);
+  params.set("batch", batch);
+
+  url.search = params.toString();
+  window.location.href = url.toString();
+}
+
+document.getElementById("backward").addEventListener("click", function() {
+  changeBatch(-1);
+});
+document.getElementById("forward").addEventListener("click", function() {
+  changeBatch(1);
+});
