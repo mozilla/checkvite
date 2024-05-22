@@ -335,3 +335,65 @@ document
   .addEventListener("click", function(event) {
     openTab(event, "stats");
   });
+
+async function updateProgressBar() {
+  try {
+    // Fetch the data from the server; assuming the endpoint is '/stats'
+    const response = await fetch("/stats");
+    const data = await response.json();
+    console.log(data);
+
+    // Extract values from the JSON response
+    const { verified, need_training, to_verify } = data;
+
+    // Calculate total to compute percentages
+    let total = verified + need_training + to_verify;
+
+    // Find segments
+    let accurateSegment = document.querySelector(".segment.accurate");
+    let biasedSegment = document.querySelector(".segment.biased");
+    let notCheckedSegment = document.querySelector(".segment.not-checked");
+
+    let accuratePercent = (verified / total) * 100 || 0;
+    let biasedPercent = (need_training / total) * 100 || 0;
+    let notCheckedPercent = (to_verify / total) * 100 || 0;
+
+    // Update segments with new data
+    accurateSegment.style.width = `${accuratePercent}%`;
+    accurateSegment.textContent = `${verified}`;
+    biasedSegment.style.width = `${biasedPercent}%`;
+    biasedSegment.textContent = `${need_training}`;
+    notCheckedSegment.style.width = `${notCheckedPercent}%`;
+    notCheckedSegment.textContent = `${to_verify}`;
+  } catch (error) {
+    console.error("Failed to fetch stats: ", error);
+    // Optionally handle errors, e.g., show an error message on the UI
+  }
+}
+
+function updateImageDisplay() {
+  const preview = document.getElementById("imagePreview");
+  const file = document.getElementById("image").files[0];
+  if (file) {
+    preview.src = URL.createObjectURL(file);
+    preview.onload = function() {
+      URL.revokeObjectURL(preview.src); // Free up memory
+    };
+  }
+}
+
+const imageInput = document.getElementById("image");
+const imagePreview = document.getElementById("imagePreview");
+
+imageInput.addEventListener("change", function() {
+  const file = this.files[0];
+  if (file) {
+    imagePreview.src = URL.createObjectURL(file);
+    imagePreview.style.display = "block"; // Make sure to show the image element
+    imagePreview.onload = function() {
+      URL.revokeObjectURL(imagePreview.src); // Free up memory
+    };
+  }
+});
+
+updateProgressBar();

@@ -98,43 +98,37 @@
   <div id="stats" class="tabcontent" style="display: none">
       <div class="card" style="margin-top: 15px; margin-bottom: 15px">
         <header>
+
+        <h3>Training Stats</h3>
         </header>
 
-        Training Stats
-        <ul>
-          <li>Number of images: {{ total_images }}</li>
-          <li>Number of images queued for training: {{ to_train_images }}</li>
-          <li>Number of images re-trained: {{ retrained_images }}</li>
-          <li>Number of images marked as good: {{ good_images }}</li>
-          <li>Number of custom images added: {{ custom_images }}</li>
-        </ul>
 
-        <ul>
-          <li><span class="tag">human</span> captioned by a person</li>
-          <!--
-          <li>
-            <span class="tag">large</span> captioned using Microsoft's git-large
-          </li>
-          -->
-          <li>
-            <span class="tag">pdf</span> captioned using PDF.js current model
-          </li>
-        </ul>
+          <div class="progress-bar">
+      <div class="segment accurate" data-tooltip="Accurate" style="width: 30%;">30%</div>
+      <div class="segment biased" data-tooltip="Innacurate" style="width: 20%;">20%</div>
+      <div class="segment not-checked" data-tooltip="Not checked yet" style="width: 50%;">50%</div>
+</div>
 
-        <p>
-          For each image, you can flag the PDF.js model as incorrect and provide
-          a new caption. Each flagged image will be added to a new dataset to
-          fine-tune the model.
-        </p>
-        <p>
-          You can also add a custom image, check the inference done with it and
-          flag it as incorrect and provide a new caption.
-        </p>
-        <p>
-          When an image is added to the dataset, you will find it in the
-          validation page to check the result once the model has be trained with
-          it.
-        </p>
+<h3>Add a new image</h3>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <label for="image">Image:</label>
+<input type="file" id="image" name="image" required><br><br>
+        <img id="imagePreview" src="#" alt="Image preview..." style="max-width: 400px; max-height: 300px; display: none;"><br><br>
+
+
+        <label for="alt_text">Alt Text:</label>
+        <input type="text" id="alt_text" name="alt_text" placeholder="Enter alt text for the image" required><br><br>
+
+        <label for="license">License:</label>
+        <input type="text" id="license" name="license" value="APLv2" required><br><br>
+
+        <label for="source">Source:</label>
+        <input type="text" id="source" name="source" value="N/A" required><br><br>
+
+
+        <button type="submit">Upload</button>
+    </form>
+
         <footer class="is-right">
           <button
             class="button primary"

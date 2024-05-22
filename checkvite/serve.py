@@ -1,6 +1,10 @@
 from io import BytesIO
 import os
 import asyncio
+from aiohttp import web
+from PIL import Image as PILImage
+import io
+from collections import OrderedDict
 
 from aiohttp_session import setup, get_session
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
@@ -10,7 +14,7 @@ import aiohttp_jinja2
 from datasets import (
     load_dataset,
     Dataset,
-    DatasetDict,
+    load_from_disk,
     Features,
     Value,
     ClassLabel,
@@ -24,8 +28,6 @@ from checkvite.db import ImageCaptionDataset, ImageCaptionDataStore
 SECRET_KEY = "nYzdi-LJ4aqGqvCF28Yt2kVpWiGrWniBFLAGLPtRcx4="
 HERE = os.path.dirname(__file__)
 
-
-print("Loading dataset...")
 
 features = Features(
     {
@@ -42,15 +44,17 @@ features = Features(
 )
 
 
+print("Loading dataset...")
 try:
-    DS = load_dataset("./saved_dataset")
-except Exception:
+    DS = load_from_disk("./saved_dataset")
+    print("Dataset loaded from disk.")
+except Exception as e:
+    print(e)
     DS = load_dataset("tarekziade/adversarial", split="train")
+    print("Original dataset loaded from HF.")
 
-print("Datasets loaded.")
 
-
-BY_ID = {}
+BY_ID = OrderedDict()
 for example in DS:
     BY_ID[example["image_id"]] = example
 
@@ -88,6 +92,25 @@ async def _do_save():
             ds.cast(features)
             ds.save_to_disk("./saved_dataset")
             TO_BE_SAVED = False
+
+
+@routes.get("/stats")
+async def stats_handler(request):
+    need_training_count = sum(
+        1 for item in BY_ID.values() if item.get("need_training") == 1
+    )
+    verified_count = sum(1 for item in BY_ID.values() if item.get("verified") == 1)
+    total_count = len(BY_ID)
+    to_verify_count = total_count - verified_count
+
+    # Creating a JSON response object with the counts
+    response_data = {
+        "need_training": need_training_count,
+        "verified": verified_count,
+        "to_verify": to_verify_count,
+    }
+    # Return the JSON response
+    return web.json_response(response_data)
 
 
 @routes.get("/images/{image_id}.jpg")
@@ -149,10 +172,6 @@ async def index(request):
     session = await get_session(request)
 
     return {
-        "retrained_images": 0,
-        "to_train_images": 0,
-        "good_images": 0,
-        "custom_images": 0,
         "message": session.pop("message", ""),
         "total_images": len(DS),
     }
@@ -179,6 +198,39 @@ async def handle_train(request):
         session["message"] = "Caption validated"
 
     BY_ID[image_id] = row
+    save_to_disk()
+    raise web.HTTPFound("/")  # Redirect to the root
+
+
+@routes.post("/upload")
+async def handle_upload(request):
+    reader = await request.multipart()
+    image_data = await reader.next()
+    pil_image = PILImage.open(io.BytesIO(await image_data.read()))
+    new_image_id = max(IMAGE_IDS) + 1 if IMAGE_IDS else 1
+
+    form_data = {}
+    field_names = ["alt_text", "license", "source"]
+    for name in field_names:
+        field = await reader.next()
+        form_data[name] = await field.text()
+
+    entry = {
+        "image_id": new_image_id,
+        "image": pil_image,
+        "alt_text": form_data["alt_text"],
+        "license": form_data["license"],
+        "source": form_data["source"],
+        "inclusive_alt_text": "",
+        "need_training": 0,
+        "verified": 0,
+        "dataset": "custom",
+    }
+    BY_ID.update({new_image_id: entry})
+    BY_ID.move_to_end(new_image_id, last=False)
+
+    # Update IMAGE_IDS list
+    IMAGE_IDS.insert(0, new_image_id)
     save_to_disk()
     raise web.HTTPFound("/")  # Redirect to the root
 
