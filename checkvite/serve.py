@@ -222,6 +222,8 @@ async def handle_upload(request):
     reader = await request.multipart()
     image_data = await reader.next()
     pil_image = PILImage.open(io.BytesIO(await image_data.read()))
+    pil_image = pil_image.convert("RGB")
+
     new_image_id = max(IMAGE_IDS) + 1 if IMAGE_IDS else 1
 
     form_data = {}
