@@ -5,6 +5,8 @@ from aiohttp import web
 from PIL import Image as PILImage
 import io
 from collections import OrderedDict
+import argparse
+
 
 from aiohttp_session import setup, get_session
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
@@ -261,7 +263,15 @@ aiohttp_jinja2.setup(
 
 
 def main():
-    web.run_app(app)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--local", action="store_true", help="Set the mode to local.", default=False
+    )
+    args = parser.parse_args()
+    if args.local:
+        web.run_app(app)
+    else:
+        web.run_app(app, path=os.path.join(os.path.dirname(__file__), "aiohttp.socket"))
 
 
 if __name__ == "__main__":
