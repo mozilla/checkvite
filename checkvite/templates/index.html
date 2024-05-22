@@ -37,8 +37,10 @@
               class="button outline tablinks {{ 'active' if tab == 'stats' else '' }}"
               >Stats</a
             >
+            {% if tab != 'stats' %}
             <a class="button outline tablinks" id="backward">⬅️</a>
             <a class="button outline tablinks" id="forward">➡️</a>
+            {% endif %}
           </div>
         </div>
       </nav>
@@ -55,7 +57,7 @@
         {% for i in range(start, end) %}
         <div class="row">
           {% for x in range(3) %} {% set j = (i - start) * 3 + start + x %}
-          <div id="image{{ j }}" class="col-4">
+          <div id="image{{ j }}" class="col-4" style="display: none">
             <form
               action="/train"
               method="POST"

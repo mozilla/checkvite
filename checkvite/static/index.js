@@ -2,14 +2,14 @@ import { pipeline } from "https://cdn.jsdelivr.net/npm/@xenova/transformers";
 
 const url = new URL(window.location);
 const params = new URLSearchParams(url.search);
-const tabName = params.get("tab") || "to_verify";
+const currentTab = params.get("tab") || "to_verify";
 let batch = parseInt(params.get("batch") || 1);
 let start = 1 + (batch - 1) * 9;
+let pcaptioner;
 
 function blurTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
-    // Create and style the overlay
     const overlay = document.createElement("div");
     overlay.innerText = "Loading...";
     overlay.style.position = "absolute";
@@ -20,26 +20,22 @@ function blurTabContents() {
     overlay.style.backgroundColor = "rgba(255, 255, 255, 0.5)";
     overlay.style.display = "flex";
     overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "center";
-    overlay.style.fontSize = "20px";
+    overlay.style.alignItems = "flex-start"; // Changed from center to flex-start
+    overlay.style.paddingTop = "350px"; // Added padding-top of 50px
+    overlay.style.fontSize = "30px";
     overlay.style.zIndex = "1000";
+    overlay.style.animation = "spin 2s linear infinite";
+    overlay.style.transformOrigin = "center";
 
-    // Add the overlay to the tab
     tab.style.position = "relative";
     tab.appendChild(overlay);
-
-    // Apply the blur effect
-    tab.style.filter = "blur(5px)";
   });
 }
 
 function clearBlurOnTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
-    // Remove the blur effect
     tab.style.filter = "none";
-
-    // Remove the loading overlay
     if (
       tab.lastElementChild &&
       tab.lastElementChild.innerText === "Loading..."
@@ -49,18 +45,9 @@ function clearBlurOnTabContents() {
   });
 }
 
-blurTabContents();
-
-const pcaptioner = await pipeline(
-  "image-to-text",
-  "tarekziade/vit-base-patch16-224-in21k-distilgpt2",
-);
-
 async function fetchCaption(image_id) {
-  console.log("fetchCaption: ", image_id);
   const url = `/images/${image_id}.jpg`;
   const res = await pcaptioner(url);
-  console.log("fetchCaption: ", res[0].generated_text);
   return res[0].generated_text;
 }
 
@@ -99,10 +86,9 @@ function displayCaption(captioner, image_id, class_prefix = "") {
 }
 
 async function fetchImages() {
-  const response = await fetch(`/get_images?batch=${batch}&tab=${tabName}`);
+  const response = await fetch(`/get_images?batch=${batch}&tab=${currentTab}`);
   const data = await response.json();
 
-  // Create an array to hold promises that resolve when each image loads
   const loadPromises = [];
 
   data.forEach((imageData, index) => {
@@ -115,40 +101,31 @@ async function fetchImages() {
 
     const imageBlock = document.createElement("div");
     imageBlock.className = "image-block";
-
-    // Create an image element
     const img = document.createElement("img");
     img.src = imageData.image_url;
     img.className = "image";
 
-    // Create a promise that resolves when the image is loaded
     const imageLoadPromise = new Promise((resolve) => {
       img.onload = () => {
         resolve();
       };
     });
     loadPromises.push(imageLoadPromise);
-
-    // Create a div element to hold the captions after images have loaded
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
-
     const humanCaption = taggedText("Human", imageData.alt_text);
     captionDiv.appendChild(humanCaption);
-
     imageBlock.appendChild(captionDiv);
     container.insertBefore(imageBlock, container.firstChild);
-
     container.insertBefore(img, container.firstChild);
+    container.style.display = "block";
 
     document.getElementById(`image_id${start + index}`).value =
       imageData.image_id;
   });
 
-  // Wait for all images to load
   await Promise.all(loadPromises);
 
-  // After all images have loaded, start loading captions
   data.forEach((imageData, index) => {
     if (index >= 9) return;
 
@@ -160,42 +137,17 @@ async function fetchImages() {
   });
 }
 
-fetchImages();
-clearBlurOnTabContents();
+function openTab(_evt, tabName) {
+  if (currentTab === tabName) return;
 
-function openTab(evt, tabName) {
   var url = new URL(window.location);
   var params = new URLSearchParams(url.search);
   var batch = parseInt(params.get("batch") || 1);
   params.set("tab", tabName);
-  params.set("batch", batch);
+  params.set("batch", "1"); // changing the tab resets the batch to 1
   url.search = params.toString();
   window.location.href = url.toString();
 }
-
-document
-  .getElementById("tab_to_verify")
-  .addEventListener("click", function(event) {
-    openTab(event, "to_verify");
-  });
-
-document
-  .getElementById("tab_verified")
-  .addEventListener("click", function(event) {
-    openTab(event, "verified");
-  });
-
-document
-  .getElementById("tab_to_train")
-  .addEventListener("click", function(event) {
-    openTab(event, "to_train");
-  });
-
-document
-  .getElementById("tab_stats")
-  .addEventListener("click", function(event) {
-    openTab(event, "stats");
-  });
 
 async function updateProgressBar() {
   try {
@@ -243,24 +195,6 @@ function updateImageDisplay() {
   }
 }
 
-if (tabName === "stats") {
-  const imageInput = document.getElementById("image");
-  const imagePreview = document.getElementById("imagePreview");
-
-  imageInput.addEventListener("change", function() {
-    const file = this.files[0];
-    if (file) {
-      imagePreview.src = URL.createObjectURL(file);
-      imagePreview.style.display = "block"; // Make sure to show the image element
-      imagePreview.onload = function() {
-        URL.revokeObjectURL(imagePreview.src); // Free up memory
-      };
-    }
-  });
-
-  updateProgressBar();
-}
-
 function changeBatch(direction) {
   var url = new URL(window.location);
   var params = new URLSearchParams(url.search);
@@ -279,9 +213,49 @@ function changeBatch(direction) {
   window.location.href = url.toString();
 }
 
-document.getElementById("backward").addEventListener("click", function() {
-  changeBatch(-1);
-});
-document.getElementById("forward").addEventListener("click", function() {
-  changeBatch(1);
-});
+async function initPage() {
+  blurTabContents();
+  const tabs = ["to_verify", "verified", "to_train", "stats"];
+
+  tabs.forEach((tab) => {
+    document
+      .getElementById(`tab_${tab}`)
+      .addEventListener("click", (event) => openTab(event, tab));
+  });
+
+  if (currentTab === "stats") {
+    const imageInput = document.getElementById("image");
+    const imagePreview = document.getElementById("imagePreview");
+
+    imageInput.addEventListener("change", function() {
+      const file = this.files[0];
+      if (file) {
+        imagePreview.src = URL.createObjectURL(file);
+        imagePreview.style.display = "block"; // Make sure to show the image element
+        imagePreview.onload = function() {
+          URL.revokeObjectURL(imagePreview.src); // Free up memory
+        };
+      }
+    });
+
+    updateProgressBar();
+  } else {
+    pcaptioner = await pipeline(
+      "image-to-text",
+      "tarekziade/vit-base-patch16-224-in21k-distilgpt2",
+    );
+
+    fetchImages();
+
+    document.getElementById("backward").addEventListener("click", function() {
+      changeBatch(-1);
+    });
+    document.getElementById("forward").addEventListener("click", function() {
+      changeBatch(1);
+    });
+  }
+
+  clearBlurOnTabContents();
+}
+
+initPage();
