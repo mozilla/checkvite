@@ -1,6 +1,6 @@
-{% set items_per_batch = 9 %}
-{% set start = 1 + (batch - 1) * items_per_batch %}
-{% set end = start + 3 %}
+{% set items_per_batch = 9 %} {% set start = 1 + (batch - 1) * items_per_batch
+%} {% set end = start + 3 %}
+
 <!doctype html>
 <html>
   <head>
@@ -12,113 +12,166 @@
   <body>
     <div class="container">
       <nav class="nav">
-  <div class="nav-left">
-    <a class="brand" href="#"><img src="/static/moz.svg" style="height: 30px"/>PDF.js alt text</a>
-
-    <div class="tabs">
-      <a id="tab_to_verify" class="button outline tablinks {{ 'active' if tab == 'to_verify' else '' }}"">To Verify</a>
-      <a id="tab_verified" class="button outline tablinks {{ 'active' if tab == 'verified' else '' }}"">Verified</a>
-      <a id="tab_to_train" class="button outline tablinks {{ 'active' if tab == 'to_train' else '' }}"">To train</a>
-      <a id="tab_stats" class="button outline tablinks {{ 'active' if tab == 'stats' else '' }}"">Stats</a>
-    <a class="button outline tablinks" id="backward">⬅️</a>
-    <a class="button outline tablinks" id="forward">➡️</a>
-  </div>
-
-
-  </div>
-</nav>
- <br/>
-  {% if message %}
-  <div class="row">
-  <div class="col-12">
-  <h4>{{message}}</h4>
-  </div>
-  </div>
-  {% endif %}
-
-
-{% if tab != 'stats' %}
-
-  <div id="images" class="tabcontent">
-
-  {% for i in range(start, end) %}
-    <div class="row">
-      {% for x in range(3) %}  <!-- Assuming each row should have 3 columns -->
-        {% set j = (i - start) * 3 + start + x %}
-        <div id="image{{ j }}" class="col-4">
-          <form action="/train" method="POST" enctype="application/x-www-form-urlencoded">
-            <p>Train with the caption below, or mark it as OK
-              <input type="text" name="caption" id="caption{{ j }}"></input>
-              <input id="image_id{{ j }}" type="hidden" name="image_id" value=""></input>
-            </p>
-            <footer class="is-right">
-              <button name="train" type="submit" id="fail_{{ j }}" class="button error">Train</button>
-              <button name="discard" type="submit" id="success_{{ j }}" class="button success">Discard</button>
-            </footer>
-          </form>
+        <div class="nav-left">
+          <a class="brand" href="#">
+            <img src="/static/moz.svg" style="height: 30px" />PDF.js alt text
+          </a>
+          <div class="tabs">
+            <a
+              id="tab_to_verify"
+              class="button outline tablinks {{ 'active' if tab == 'to_verify' else '' }}"
+              >To Verify</a
+            >
+            <a
+              id="tab_verified"
+              class="button outline tablinks {{ 'active' if tab == 'verified' else '' }}"
+              >Verified</a
+            >
+            <a
+              id="tab_to_train"
+              class="button outline tablinks {{ 'active' if tab == 'to_train' else '' }}"
+              >To Train</a
+            >
+            <a
+              id="tab_stats"
+              class="button outline tablinks {{ 'active' if tab == 'stats' else '' }}"
+              >Stats</a
+            >
+            <a class="button outline tablinks" id="backward">⬅️</a>
+            <a class="button outline tablinks" id="forward">➡️</a>
+          </div>
         </div>
-      {% endfor %}
-    </div>
-  {% endfor %}
-</div>
+      </nav>
+      <br />
 
-{% endif %}
-
-{% if tab == 'stats' %}
-
-
-  <div id="stats"
-       class="tabcontent">
-
-      <div class="card" style="margin-top: 15px; margin-bottom: 15px">
-        <header>
-
-        <h3>Training Stats</h3>
-        </header>
-
-
-          <div class="progress-bar">
-      <div class="segment accurate" data-tooltip="Accurate" style="width: 30%;">30%</div>
-      <div class="segment biased" data-tooltip="Innacurate" style="width: 20%;">20%</div>
-      <div class="segment not-checked" data-tooltip="Not checked yet" style="width: 50%;">50%</div>
-</div>
-
-<h3>Add a new image</h3>
-    <form action="/upload" method="post" enctype="multipart/form-data">
-        <label for="image">Image:</label>
-<input type="file" id="image" name="image" required><br><br>
-        <img id="imagePreview" src="#" alt="Image preview..." style="max-width: 400px; max-height: 300px; display: none;"><br><br>
-
-
-        <label for="alt_text">Alt Text:</label>
-        <input type="text" id="alt_text" name="alt_text" placeholder="Enter alt text for the image" required><br><br>
-
-        <label for="license">License:</label>
-        <input type="text" id="license" name="license" value="APLv2" required><br><br>
-
-        <label for="source">Source:</label>
-        <input type="text" id="source" name="source" value="N/A" required><br><br>
-
-
-        <button type="submit">Upload</button>
-    </form>
-
-        <footer class="is-right">
-          <button
-            class="button primary"
-            id="generate-button"
-            onclick="location.reload()"
-          >
-            <span id="button-text">Load new images</span>
-          </button>
-        </footer>
+      {% if message %}
+      <div class="row">
+        <div class="col-12">
+          <h4>{{ message }}</h4>
+        </div>
       </div>
-
-
-</div>
-{% endif %}
-
-
-  </div>
+      {% endif %} {% if tab != 'stats' %}
+      <div id="images" class="tabcontent">
+        {% for i in range(start, end) %}
+        <div class="row">
+          {% for x in range(3) %} {% set j = (i - start) * 3 + start + x %}
+          <div id="image{{ j }}" class="col-4">
+            <form
+              action="/train"
+              method="POST"
+              enctype="application/x-www-form-urlencoded"
+            >
+              <p>
+                Train with the caption below, or mark it as OK
+                <input type="text" name="caption" id="caption{{ j }}" />
+                <input
+                  id="image_id{{ j }}"
+                  type="hidden"
+                  name="image_id"
+                  value=""
+                />
+              </p>
+              <footer class="is-right">
+                <button
+                  name="train"
+                  type="submit"
+                  id="fail_{{ j }}"
+                  class="button error"
+                >
+                  Train
+                </button>
+                <button
+                  name="discard"
+                  type="submit"
+                  id="success_{{ j }}"
+                  class="button success"
+                >
+                  Discard
+                </button>
+              </footer>
+            </form>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %} {% if tab == 'stats' %}
+      <div id="stats" class="tabcontent">
+        <div class="card" style="margin-top: 15px; margin-bottom: 15px">
+          <header>
+            <h3>Training Stats</h3>
+          </header>
+          <div class="progress-bar">
+            <div
+              class="segment accurate"
+              data-tooltip="Accurate"
+              style="width: 30%"
+            >
+              30%
+            </div>
+            <div
+              class="segment biased"
+              data-tooltip="Inaccurate"
+              style="width: 20%"
+            >
+              20%
+            </div>
+            <div
+              class="segment not-checked"
+              data-tooltip="Not checked yet"
+              style="width: 50%"
+            >
+              50%
+            </div>
+          </div>
+          <h3>Add a new image</h3>
+          <form action="/upload" method="post" enctype="multipart/form-data">
+            <label for="image">Image:</label>
+            <input type="file" id="image" name="image" required /><br /><br />
+            <img
+              id="imagePreview"
+              src="#"
+              alt="Image preview..."
+              style="max-width: 400px; max-height: 300px; display: none"
+            /><br /><br />
+            <label for="alt_text">Alt Text:</label>
+            <input
+              type="text"
+              id="alt_text"
+              name="alt_text"
+              placeholder="Enter alt text for the image"
+              required
+            /><br /><br />
+            <label for="license">License:</label>
+            <input
+              type="text"
+              id="license"
+              name="license"
+              value="APLv2"
+              required
+            /><br /><br />
+            <label for="source">Source:</label>
+            <input
+              type="text"
+              id="source"
+              name="source"
+              value="N/A"
+              required
+            /><br /><br />
+            <button type="submit">Upload</button>
+          </form>
+          <footer class="is-right">
+            <button
+              class="button primary"
+              id="generate-button"
+              onclick="location.reload()"
+            >
+              <span id="button-text">Load new images</span>
+            </button>
+          </footer>
+        </div>
+      </div>
+      {% endif %}
+    </div>
   </body>
 </html>
