@@ -5,7 +5,8 @@ const params = new URLSearchParams(url.search);
 const currentTab = params.get("tab") || "to_verify";
 let batch = parseInt(params.get("batch") || 1);
 let start = 1 + (batch - 1) * 9;
-let pcaptioner;
+let mozillaCaptioner;
+let baseLineCaptioner;
 
 function blurTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
@@ -45,9 +46,15 @@ function clearBlurOnTabContents() {
   });
 }
 
-async function fetchCaption(image_id) {
+async function fetchCaption(captioner, image_id) {
   const url = `/images/${image_id}.jpg`;
-  const res = await pcaptioner(url);
+  let pipeline;
+  if (captioner === "Firefox") {
+    pipeline = mozillaCaptioner;
+  } else {
+    pipeline = baseLineCaptioner;
+  }
+  const res = await pipeline(url);
   return res[0].generated_text;
 }
 
@@ -68,7 +75,7 @@ function displayCaption(captioner, image_id, class_prefix = "") {
   button.addEventListener("click", function(event) {
     event.target.innerHTML = '<div class="loader"></div>';
 
-    fetchCaption(image_id).then((caption) => {
+    fetchCaption(captioner, image_id).then((caption) => {
       const captionDiv = document.getElementById(
         `${class_prefix}caption${captioner}${image_id}`,
       );
@@ -113,15 +120,28 @@ async function fetchImages() {
     loadPromises.push(imageLoadPromise);
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
-    const humanCaption = taggedText("Human", imageData.alt_text);
+
+    const humanCaption = taggedText("Human text", imageData.alt_text);
     captionDiv.appendChild(humanCaption);
+    console.log(imageData);
+
+    if (currentTab === "to_train") {
+      const trainCaption = taggedText(
+        "Text for training",
+        imageData.inclusive_alt_text,
+      );
+      captionDiv.appendChild(trainCaption);
+    }
+
     imageBlock.appendChild(captionDiv);
     container.insertBefore(imageBlock, container.firstChild);
     container.insertBefore(img, container.firstChild);
     container.style.display = "block";
 
-    document.getElementById(`image_id${start + index}`).value =
-      imageData.image_id;
+    if (currentTab != "to_train") {
+      document.getElementById(`image_id${start + index}`).value =
+        imageData.image_id;
+    }
   });
 
   await Promise.all(loadPromises);
@@ -133,7 +153,10 @@ async function fetchImages() {
       .getElementById(`image${start + index}`)
       .querySelector(".caption-container");
 
-    captionContainer.appendChild(displayCaption("pdf", imageData.image_id));
+    captionContainer.appendChild(displayCaption("Firefox", imageData.image_id));
+    captionContainer.appendChild(
+      displayCaption("Baseline model", imageData.image_id),
+    );
   });
 }
 
@@ -240,9 +263,13 @@ async function initPage() {
 
     updateProgressBar();
   } else {
-    pcaptioner = await pipeline(
+    mozillaCaptioner = await pipeline(
       "image-to-text",
       "tarekziade/vit-base-patch16-224-in21k-distilgpt2",
+    );
+    baseLineCaptioner = await pipeline(
+      "image-to-text",
+      "Xenova/vit-gpt2-image-captioning",
     );
 
     fetchImages();

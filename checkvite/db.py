@@ -9,6 +9,7 @@ from datasets import (
     Value,
     ClassLabel,
     Image,
+    Sequence,
 )
 
 features = Features(
@@ -22,6 +23,7 @@ features = Features(
         "inclusive_alt_text": Value("string"),
         "need_training": ClassLabel(names=["no", "yes"]),
         "verified": ClassLabel(names=["no", "yes"]),
+        "rejection_reasons": Sequence(Value("string")),
     }
 )
 

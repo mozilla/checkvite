@@ -58,40 +58,88 @@
         <div class="row">
           {% for x in range(3) %} {% set j = (i - start) * 3 + start + x %}
           <div id="image{{ j }}" class="col-4" style="display: none">
-            <form
-              action="/train"
-              method="POST"
-              enctype="application/x-www-form-urlencoded"
-            >
-              <p>
-                Train with the caption below, or mark it as OK
-                <input type="text" name="caption" id="caption{{ j }}" />
-                <input
-                  id="image_id{{ j }}"
-                  type="hidden"
-                  name="image_id"
-                  value=""
-                />
-              </p>
-              <footer class="is-right">
-                <button
-                  name="train"
-                  type="submit"
-                  id="fail_{{ j }}"
-                  class="button error"
-                >
-                  Train
-                </button>
-                <button
-                  name="discard"
-                  type="submit"
-                  id="success_{{ j }}"
-                  class="button success"
-                >
-                  Discard
-                </button>
-              </footer>
-            </form>
+            <div class="image-block">
+              <h4>Feedback</h4>
+
+
+              <form
+                action="/train"
+                method="POST"
+                enctype="application/x-www-form-urlencoded"
+              >
+
+              {% if tab != 'to_train' %}
+                <p>
+                  <label for="caption">Improved alt text</label>
+                  <input type="text" name="caption" id="caption{{ j }}" />
+                  <input
+                    id="image_id{{ j }}"
+                    type="hidden"
+                    name="image_id"
+                    value=""
+                  />
+                  <fieldset>
+                  <legend>Reasons for rejection</legend>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="inaccurate">
+                      Inaccurate
+                    </label><br>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="assumptive">
+                      Assumptive
+                    </label><br>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="difficult_to_read">
+                      Difficult to read
+                    </label><br>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="not_concise">
+                      Not concise
+                    </label><br>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="lacks_details">
+                      Lacks details
+                    </label><br>
+                    <label>
+                      <input type="checkbox" name="rejection_reason" value="wrong_tone">
+                      Wrong tone
+                    </label><br>
+
+                  </fieldset>
+                </p>
+
+                {% endif %}
+                <footer class="is-right">
+                  {% if tab != 'to_train' %}
+
+                  <button
+                    name="train"
+                    type="submit"
+                    id="fail_{{ j }}"
+                    class="button error"
+                  >
+                   {% if tab == 'verified' %}
+                   I changed my mind!
+                   {% endif %}
+                    Reject & Retrain
+                  </button>
+                 {% endif %}
+                  {% if tab != 'verified' %}
+                  <button
+                    name="discard"
+                    type="submit"
+                    id="success_{{ j }}"
+                    class="button success"
+                  >
+                   {% if tab == 'to_train' %}
+                   I changed my mind!
+                   {% endif %}
+                    Accept
+                  </button>
+                  {% endif %}
+                </footer>
+              </form>
+            </div>
           </div>
           {% endfor %}
         </div>
@@ -106,14 +154,14 @@
           <div class="progress-bar">
             <div
               class="segment accurate"
-              data-tooltip="Accurate"
+              data-tooltip="Acceptable"
               style="width: 30%"
             >
               30%
             </div>
             <div
               class="segment biased"
-              data-tooltip="Inaccurate"
+              data-tooltip="Inacceptable"
               style="width: 20%"
             >
               20%

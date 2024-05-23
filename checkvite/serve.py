@@ -60,6 +60,7 @@ async def get_random_images(request):
                 "image_id": x["image_id"],
                 "alt_text": x["alt_text"],
                 "image_url": f"/images/{x['image_id']}.jpg",
+                "inclusive_alt_text": x["inclusive_alt_text"],
             },
             images,
         )
@@ -96,10 +97,12 @@ async def handle_train(request):
     if action == "train":
         verified = 0
         need_training = 1
+        rejection_reasons = data.getall("rejection_reason", [])
         session["message"] = "Added for training."
     else:
         need_training = 0
         verified = 1
+        rejection_reasons = []
         session["message"] = "Caption validated."
 
     db.update_image(
@@ -107,6 +110,7 @@ async def handle_train(request):
         inclusive_alt_text=data["caption"],
         need_training=need_training,
         verified=verified,
+        rejection_reasons=rejection_reasons,
     )
     tab = request.query.get("tab", "to_verify")
     batch = request.query.get("batch", 1)
@@ -135,6 +139,7 @@ async def handle_upload(request):
         "need_training": 0,
         "verified": 0,
         "dataset": "custom",
+        "rejection_reasons": [],
     }
     db.add_image(**entry)
     raise web.HTTPFound(f"/?tab=to_verify&batch=1")
