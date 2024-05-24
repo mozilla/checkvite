@@ -159,10 +159,11 @@ async function fetchImages() {
       .getElementById(`image${start + index}`)
       .querySelector(".caption-container");
 
-    captionContainer.appendChild(displayCaption("Firefox", imageData.image_id));
-    captionContainer.appendChild(
+    captionContainer.prepend(
       displayCaption("Baseline model", imageData.image_id),
     );
+
+    captionContainer.prepend(displayCaption("Firefox", imageData.image_id));
   });
 }
 
@@ -244,7 +245,7 @@ function changeBatch(direction) {
 
 async function initPage() {
   blurTabContents();
-  const tabs = ["to_verify", "verified", "to_train", "stats"];
+  const tabs = ["to_verify", "verified", "to_train", "stats", "help"];
 
   tabs.forEach((tab) => {
     document
@@ -268,6 +269,8 @@ async function initPage() {
     });
 
     updateProgressBar();
+  } else if (currentTab === "help") {
+    // Do nothing
   } else {
     mozillaCaptioner = await pipeline(
       "image-to-text",
