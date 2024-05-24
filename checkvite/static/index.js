@@ -11,25 +11,24 @@ let baseLineCaptioner;
 function blurTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
-    const overlay = document.createElement("div");
-    overlay.innerText = "Loading...";
-    overlay.style.position = "absolute";
-    overlay.style.top = "0";
-    overlay.style.left = "0";
-    overlay.style.width = "100%";
-    overlay.style.height = "100%";
-    overlay.style.backgroundColor = "rgba(255, 255, 255, 0.5)";
-    overlay.style.display = "flex";
-    overlay.style.justifyContent = "center";
-    overlay.style.alignItems = "flex-start"; // Changed from center to flex-start
-    overlay.style.paddingTop = "350px"; // Added padding-top of 50px
-    overlay.style.fontSize = "30px";
-    overlay.style.zIndex = "1000";
-    overlay.style.animation = "spin 2s linear infinite";
-    overlay.style.transformOrigin = "center";
+    const container = document.createElement("div");
+    container.className = "loader-container";
+
+    // Create the loader div
+    const loader = document.createElement("div");
+    loader.className = "loader";
+
+    // Create the text div
+    const text = document.createElement("div");
+    text.className = "loading-text";
+    text.textContent = "Reticulating splines";
+
+    // Append the loader and text to the container
+    container.appendChild(loader);
+    container.appendChild(text);
 
     tab.style.position = "relative";
-    tab.appendChild(overlay);
+    tab.appendChild(container);
   });
 }
 
@@ -39,7 +38,7 @@ function clearBlurOnTabContents() {
     tab.style.filter = "none";
     if (
       tab.lastElementChild &&
-      tab.lastElementChild.innerText === "Loading..."
+      tab.lastElementChild.innerText === "Reticulating splines"
     ) {
       tab.removeChild(tab.lastElementChild);
     }

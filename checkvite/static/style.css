@@ -29,24 +29,50 @@ header {
   text-align: center; /* Centers the text inside the flex item, if needed */
 }
 
-.loader {
-  display: inline-block; /* Makes the span behave like a block for styling */
-  width: 10px; /* Diameter of the loader */
-  height: 10px; /* Diameter of the loader */
-  border-radius: 50%; /* Makes the span perfectly circular */
-  border: 2px solid #f3f3f3; /* Light grey border, covers the entire circumference */
-  border-top: 2px solid #3498db; /* Blue segment at the top */
-  animation: spin 2s linear infinite; /* Continuous rotation animation */
+.loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-/* Keyframes to create the spinning effect */
+.loader {
+  width: 100px; /* Increased size */
+  height: 100px; /* Increased size */
+  border: 10px solid #f3f3f3; /* Increased size */
+  border-top: 10px solid #3498db; /* Increased size */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 20px; /* Increased margin */
+  font-size: 24px; /* Increased font size */
+  color: #333;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.4);
+  }
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+}
+
 @keyframes spin {
   0% {
     transform: rotate(0deg);
-  } /* Start position */
+  }
   100% {
     transform: rotate(360deg);
-  } /* End position (full rotation) */
+  }
 }
 
 .caption-container {
