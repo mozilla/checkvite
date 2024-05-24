@@ -143,10 +143,8 @@ async function fetchImages() {
     container.insertBefore(img, container.firstChild);
     container.style.display = "block";
 
-    if (currentTab != "to_train") {
-      document.getElementById(`image_id${start + index}`).value =
-        imageData.image_id;
-    }
+    document.getElementById(`image_id${start + index}`).value =
+      imageData.image_id;
   });
 
   await Promise.all(loadPromises);

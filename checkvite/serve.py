@@ -107,7 +107,7 @@ async def handle_train(request):
 
     db.update_image(
         image_id,
-        inclusive_alt_text=data["caption"],
+        inclusive_alt_text=data.get("caption", ""),
         need_training=need_training,
         verified=verified,
         rejection_reasons=rejection_reasons,

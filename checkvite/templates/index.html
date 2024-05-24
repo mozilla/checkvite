@@ -74,17 +74,16 @@
                 method="POST"
                 enctype="application/x-www-form-urlencoded"
               >
-
+              <input
+                id="image_id{{ j }}"
+                type="hidden"
+                name="image_id"
+                value=""
+              />
               {% if tab != 'to_train' %}
                 <p>
                   <label for="caption">Improved alt text</label>
                   <input type="text" name="caption" id="caption{{ j }}" />
-                  <input
-                    id="image_id{{ j }}"
-                    type="hidden"
-                    name="image_id"
-                    value=""
-                  />
                   <fieldset>
                   <legend>Reasons for rejection</legend>
                     <label>
