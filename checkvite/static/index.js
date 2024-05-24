@@ -54,8 +54,14 @@ async function fetchCaption(captioner, image_id) {
   } else {
     pipeline = baseLineCaptioner;
   }
-  const res = await pipeline(url);
-  return res[0].generated_text;
+  let res = await pipeline(url);
+  res = res[0].generated_text;
+
+  // hack until we fix the model for that bug
+  if (captioner === "Firefox" && res === "T") {
+    res = "The image seems to be a textual document.";
+  }
+  return res;
 }
 
 function taggedText(tag, text) {
