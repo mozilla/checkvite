@@ -78,7 +78,7 @@ function displayCaption(captioner, image_id, class_prefix = "") {
   button.style.backgroundColor = "#f3f3f6";
 
   button.addEventListener("click", function(event) {
-    event.target.innerHTML = '<div class="loader"></div>';
+    event.target.innerHTML = '<div class="loader-small"></div>';
 
     fetchCaption(captioner, image_id).then((caption) => {
       const captionDiv = document.getElementById(

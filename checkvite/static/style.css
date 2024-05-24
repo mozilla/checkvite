@@ -35,6 +35,15 @@ header {
   align-items: center;
 }
 
+.loader-small {
+  width: 10px; /* Reduced size */
+  height: 10px; /* Reduced size */
+  border: 2px solid #f3f3f3; /* Adjusted border size */
+  border-top: 2px solid #3498db; /* Adjusted border size */
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
 .loader {
   width: 100px; /* Increased size */
   height: 100px; /* Increased size */
