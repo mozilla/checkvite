@@ -52,25 +52,24 @@ async def get_random_images(request):
         need_training = 1
 
     batch = int(request.query.get("batch", 1))
+    start = (batch - 1) * 9
 
-    images = db.get_images(verified=verified, need_training=need_training)
-    images = list(
-        map(
-            lambda x: {
-                "image_id": x["image_id"],
-                "alt_text": x["alt_text"],
-                "image_url": f"/images/{x['image_id']}.jpg",
-                "inclusive_alt_text": x["inclusive_alt_text"],
-            },
-            images,
-        )
+    def _transform(entry):
+        return {
+            "image_id": entry["image_id"],
+            "alt_text": entry["alt_text"],
+            "image_url": f"/images/{entry['image_id']}.jpg",
+            "inclusive_alt_text": entry["inclusive_alt_text"],
+        }
+
+    images = db.get_images(
+        verified=verified,
+        need_training=need_training,
+        start=start,
+        transform=_transform,
     )
 
-    start = (batch - 1) * 9
-    end = start + 9
-    picked = images[start:end]
-
-    return web.json_response(picked)
+    return web.json_response(list(images))
 
 
 @routes.get("/")

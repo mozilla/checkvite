@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 from collections import OrderedDict
 
 from datasets import (
@@ -36,7 +37,7 @@ class Database:
             print("Dataset loaded from disk.")
         except Exception as e:
             print(e)
-            ds = load_dataset("tarekziade/adversarial", split="train")
+            ds = load_dataset("Mozilla/alt-text-validation", split="train")
             print("Original dataset loaded from HF.")
 
         self.data_dict = OrderedDict()
@@ -75,11 +76,19 @@ class Database:
         self.data_dict[key] = value
         self.dirty = True
 
-    def get_images(self, verified=False, need_training=False):
-        images = list(self.data_dict.values())
-        images = list(filter(lambda x: x["verified"] == verified, images))
-        images = list(filter(lambda x: x["need_training"] == need_training, images))
-        return images
+    def get_images(
+        self, verified=False, need_training=False, start=0, amount=9, transform=None
+    ):
+        filtered_entries = (
+            entry
+            for entry in self.data_dict.values()
+            if entry["verified"] == verified and entry["need_training"] == need_training
+        )
+
+        for entry in itertools.islice(filtered_entries, start, start + amount):
+            if transform is not None:
+                entry = transform(entry)
+            yield entry
 
     def add_image(self, **fields):
         new_image_id = max(self.image_ids) + 1 if self.image_ids else 1
