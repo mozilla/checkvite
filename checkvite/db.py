@@ -1,15 +1,21 @@
+import os
 import asyncio
 import itertools
 from collections import OrderedDict
+import sqlite3
+import time
+import json
 
+from tqdm import tqdm
+from PIL import Image
+from datasets import load_dataset, Dataset, DatasetDict
 from datasets import (
     load_dataset,
     Dataset,
-    load_from_disk,
     Features,
     Value,
     ClassLabel,
-    Image,
+    Image as DImage,
     Sequence,
 )
 
@@ -17,7 +23,7 @@ features = Features(
     {
         "dataset": Value("string"),
         "image_id": Value("int64"),
-        "image": Image(),
+        "image": DImage(),
         "alt_text": Value("string"),
         "license": Value("string"),
         "source": Value("string"),
@@ -29,28 +35,201 @@ features = Features(
 )
 
 
+class PersistentOrderedDict(OrderedDict):
+    def __init__(
+        self,
+        filename,
+        image_dir="images",
+        dataset_name=None,
+        key_name=None,
+        split="train",
+        read_only=False,
+        *args,
+        **kwargs,
+    ):
+        self.filename = filename
+        self.db_file = self.filename + ".db"
+        self.last_local_update = 0
+        self.last_push = 0
+        self.image_dir = image_dir
+        os.makedirs(self.image_dir, exist_ok=True)
+        need_creation = not os.path.exists(self.db_file)
+        self.read_only = read_only
+        self.conn = sqlite3.connect(self.db_file, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+        if need_creation:
+            self._create_tables()
+        super().__init__(*args, **kwargs)
+        if need_creation:
+            if dataset_name and key_name:
+                self.load_from_ds(dataset_name, key_name, split)
+        else:
+            self._load_from_db()
+        self._load_timestamps()
+
+    def _create_tables(self):
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS data (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        """
+        )
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS timestamps (
+                name TEXT PRIMARY KEY,
+                timestamp REAL
+            )
+        """
+        )
+        self.conn.commit()
+
+    def _load_from_db(self):
+        self.cursor.execute("SELECT key, value FROM data")
+        rows = self.cursor.fetchall()
+        for key, value in rows:
+            super().__setitem__(key, json.loads(value))
+
+    def _convert_image_to_path(self, key, item):
+        if "image" in item and isinstance(item["image"], Image.Image):
+            image_path = os.path.join(self.image_dir, f"{key}.png")
+            item["image"].save(image_path, format="PNG")
+            item["image"] = image_path
+        return item
+
+    def __getitem__(self, key):
+        return super().__getitem__(str(key))
+
+    def _convert_image_from_path(self, item):
+        if (
+            "image" in item
+            and isinstance(item["image"], str)
+            and os.path.exists(item["image"])
+        ):
+            item["image"] = Image.open(item["image"])
+        return item
+
+    def __setitem__(self, key, value):
+        if self.read_only:
+            raise ValueError("Cannot set item in read-only mode")
+        key = str(key)
+        value = self._convert_image_to_path(key, value)
+        super().__setitem__(key, value)
+        self.cursor.execute(
+            "REPLACE INTO data (key, value) VALUES (?, ?)", (key, json.dumps(value))
+        )
+        self.conn.commit()
+        self._update_local_timestamp()
+
+    def __delitem__(self, key):
+        if self.read_only:
+            raise ValueError("Cannot delete item in read-only mode")
+        super().__delitem__(key)
+        if os.path.exists(os.path.join(self.image_dir, f"{key}.png")):
+            os.remove(os.path.join(self.image_dir, f"{key}.png"))
+        self.cursor.execute("DELETE FROM data WHERE key = ?", (key,))
+        self.conn.commit()
+        self._update_local_timestamp()
+
+    def clear(self):
+        if self.read_only:
+            raise ValueError("Cannot clear items in read-only mode")
+        super().clear()
+        for filename in os.listdir(self.image_dir):
+            file_path = os.path.join(self.image_dir, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+        self.cursor.execute("DELETE FROM data")
+        self.conn.commit()
+        self._update_local_timestamp()
+
+    def update(self, *args, **kwargs):
+        if self.read_only:
+            raise ValueError("Cannot update items in read-only mode")
+        for key, value in dict(*args, **kwargs).items():
+            self.__setitem__(key, value)
+
+    def load_from_ds(self, dataset_name, key_name, split="train"):
+        dataset = load_dataset(dataset_name, split=split)
+        for item in tqdm(dataset, desc="Loading dataset"):
+            key = item[key_name]
+            item = self._convert_image_to_path(key, item)
+            super().__setitem__(str(key), item)
+        self.cursor.executemany(
+            "REPLACE INTO data (key, value) VALUES (?, ?)",
+            [(str(key), json.dumps(self[key])) for key in self.keys()],
+        )
+        self.conn.commit()
+        self._update_local_timestamp()
+
+    def to_dataset(self):
+        full_data = {}
+        for key, value in self.items():
+            full_data[key] = self._convert_image_from_path(value.copy())
+        return Dataset.from_list(list(full_data.values()), features)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.conn.close()
+
+    def sync(self):
+        self.conn.commit()
+        self._save_timestamps()
+
+    def _load_timestamps(self):
+        self.cursor.execute("SELECT name, timestamp FROM timestamps")
+        rows = self.cursor.fetchall()
+        for name, timestamp in rows:
+            if name == "last_local_update":
+                self.last_local_update = timestamp
+            elif name == "last_push":
+                self.last_push = timestamp
+
+    def _save_timestamps(self):
+        self.cursor.execute(
+            "REPLACE INTO timestamps (name, timestamp) VALUES (?, ?)",
+            ("last_local_update", self.last_local_update),
+        )
+        self.cursor.execute(
+            "REPLACE INTO timestamps (name, timestamp) VALUES (?, ?)",
+            ("last_push", self.last_push),
+        )
+        self.conn.commit()
+
+    def _update_local_timestamp(self):
+        self.last_local_update = time.time()
+        self._save_timestamps()
+
+    def push_to_hub(self, hub_dataset_id, force=False):
+        if force or self.last_local_update > self.last_push:
+            ds_dict = DatasetDict({"train": self.to_dataset()})
+            ds_dict.push_to_hub(hub_dataset_id)
+            self.last_push = time.time()
+            self._save_timestamps()
+        else:
+            print("No changes detected since the last push.")
+        self.conn.commit()
+
+
 class Database:
     def __init__(self):
         print("Loading dataset...")
-        try:
-            ds = load_from_disk("./saved_dataset")
-            print("Dataset loaded from disk.")
-        except Exception as e:
-            print(e)
-            ds = load_dataset("Mozilla/alt-text-validation", split="train")
-            print("Original dataset loaded from HF.")
-
-        self.data_dict = OrderedDict()
-        for example in ds:
-            self.data_dict[example["image_id"]] = example
-
+        self.data_dict = PersistentOrderedDict(
+            "alt-text",
+            dataset_name="Mozilla/alt-text-validation",
+            split="train",
+            key_name="image_id",
+        )
         self.image_ids = list(self.data_dict.keys())
         self.dirty = False
 
     def save(self):
-        ds = Dataset.from_list(list(self.data_dict.values()))
-        ds.cast(features)
-        ds.save_to_disk("./saved_dataset")
+        print("Saving")
+        self.data_dict.sync()
 
     def __len__(self):
         return len(self.data_dict)
@@ -76,6 +255,14 @@ class Database:
         self.data_dict[key] = value
         self.dirty = True
 
+    def get_full_image(self, image_id):
+        entry = self.data_dict[image_id]
+        entry["image"] = self.data_dict.get_image(image_id)
+        return entry
+
+    def get_image(self, verified=False, need_training=False, index=0, transform=None):
+        return list(self.get_images(verified, need_training, index, 1, transform))[0]
+
     def get_images(
         self, verified=False, need_training=False, start=0, amount=9, transform=None
     ):
@@ -91,8 +278,10 @@ class Database:
             yield entry
 
     def add_image(self, **fields):
-        new_image_id = max(self.image_ids) + 1 if self.image_ids else 1
-        fields["image_id"] = new_image_id
+        new_image_id = str(
+            max([int(id) for id in self.image_ids]) + 1 if self.image_ids else 1
+        )
+        fields["image_id"] = int(new_image_id)
         self.data_dict.update({new_image_id: fields})
         self.data_dict.move_to_end(new_image_id, last=False)
         self.image_ids.insert(0, new_image_id)
@@ -100,13 +289,21 @@ class Database:
         return new_image_id
 
     def update_image(self, image_id, **fields):
-        self.data_dict[image_id].update(fields)
+        existing = self.data_dict[image_id]
+        existing.update(fields)
+        # make sure we trigger the setter
+        self.data_dict[image_id] = existing
+
+        print(f"Updated image {self.data_dict[image_id]}")
+
         self.dirty = True
 
     async def sync(self):
         while True:
-            await asyncio.sleep(60)
+            await asyncio.sleep(5)
             if self.dirty:
-                print("Saving...")
+                # with concurrent.futures.ThreadPoolExecutor() as pool:
+                #    loop = asyncio.get_running_loop()
+                #    await loop.run_in_executor(pool, self.save)
                 self.save()
                 self.dirty = False

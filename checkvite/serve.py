@@ -28,13 +28,50 @@ async def stats_handler(request_):
     return web.json_response(response_data)
 
 
-@routes.get("/images/{image_id}.jpg")
+@routes.get("/images/{image_id}.png")
 async def get_image(request):
     image_id = int(request.match_info["image_id"])
-    image = db[image_id]["image"]
+    entry = db[image_id]
+    image_path = entry["image"]
+    image = PILImage.open(image_path)
     stream = BytesIO()
-    image.save(stream, "JPEG")
-    return web.Response(body=stream.getvalue(), content_type="image/jpeg")
+    image.save(stream, "PNG")
+    return web.Response(body=stream.getvalue(), content_type="image/png")
+
+
+@routes.get("/get_image")
+async def get_single_image(request):
+    tab = request.query.get("tab", "to_verify")
+    if tab == "to_verify":
+        verified = 0
+        need_training = 0
+    elif tab == "verified":
+        verified = 1
+        need_training = 0
+    else:
+        verified = 0
+        need_training = 1
+
+    batch = int(request.query.get("batch", 1))
+    index = int(request.query.get("index", 0))
+    index = (batch - 1) * 9 + index
+
+    def _transform(entry):
+        return {
+            "image_id": entry["image_id"],
+            "alt_text": entry["alt_text"],
+            "image_url": f"/images/{entry['image_id']}.png",
+            "inclusive_alt_text": entry["inclusive_alt_text"],
+        }
+
+    image = db.get_image(
+        verified=verified,
+        need_training=need_training,
+        index=index,
+        transform=_transform,
+    )
+
+    return web.json_response(image)
 
 
 @routes.get("/get_images")
@@ -58,7 +95,7 @@ async def get_random_images(request):
         return {
             "image_id": entry["image_id"],
             "alt_text": entry["alt_text"],
-            "image_url": f"/images/{entry['image_id']}.jpg",
+            "image_url": f"/images/{entry['image_id']}.png",
             "inclusive_alt_text": entry["inclusive_alt_text"],
         }
 
@@ -92,7 +129,7 @@ async def handle_train(request):
     session = await get_session(request)
     image_id = int(data["image_id"])
 
-    action = "train" if "train" in data.keys() else "discard"
+    action = data.get("action", "discard")
     if action == "train":
         verified = 0
         need_training = 1
@@ -150,6 +187,7 @@ async def start_app(app):
 
 async def cleanup_app(app):
     app["data_saver"].cancel()
+    db.save()
     await app["data_saver"]
 
 
