@@ -51,7 +51,7 @@ function clearBlurOnTabContents() {
 }
 
 async function fetchCaption(captioner, image_id) {
-  const url = `/images/${image_id}.jpg`;
+  const url = `/images/${image_id}.png`;
   let pipeline;
   if (captioner === "Firefox") {
     pipeline = mozillaCaptioner;
@@ -107,7 +107,6 @@ async function updateProgressBar() {
     // Fetch the data from the server; assuming the endpoint is '/stats'
     const response = await fetch("/stats");
     const data = await response.json();
-    console.log(data);
 
     // Extract values from the JSON response
     const { verified, need_training, to_verify } = data;
@@ -311,7 +310,6 @@ async function fetchNewImage(batch, tab) {
     );
     if (response.ok) {
       const newImageData = await response.json();
-      console.log(newImageData);
 
       const container = document.getElementById("images");
       const newImageBlock = createImageBlock(newImageData, 9, tab);
@@ -326,6 +324,7 @@ async function fetchNewImage(batch, tab) {
         .addEventListener("submit", submitForm);
 
       renumberImageIDs();
+      prependCaptions(9, newImageData);
     } else {
       console.error("Failed to fetch a new image");
     }
@@ -336,14 +335,30 @@ async function fetchNewImage(batch, tab) {
 
 function renumberImageIDs() {
   const container = document.getElementById("images");
-  const imageBlocks = container.querySelectorAll(".col-4");
 
-  imageBlocks.forEach((block, index) => {
-    const imageIdElement = block.querySelector(".image-id");
-    if (imageIdElement) {
-      imageIdElement.textContent = index + 1;
-    }
+  const divs = container.querySelectorAll('div[id^="image"]');
+  const sortedDivs = Array.from(divs).sort((a, b) => {
+    const numA = parseInt(a.id.replace("image", ""), 10);
+    const numB = parseInt(b.id.replace("image", ""), 10);
+    return numA - numB;
   });
+  sortedDivs.forEach((div, index) => {
+    div.id = "image" + (index + 1);
+  });
+}
+
+function prependCaptions(table_idx, imageData) {
+  const captionContainer = document.querySelector(
+    `#image${table_idx} .caption-container`,
+  );
+  if (captionContainer) {
+    captionContainer.prepend(
+      displayCaption("Baseline model", imageData.image_id),
+    );
+    captionContainer.prepend(displayCaption("Firefox", imageData.image_id));
+  } else {
+    console.error(`Caption container not found for image${table_idx}`);
+  }
 }
 
 async function fetchImages() {
@@ -355,11 +370,7 @@ async function fetchImages() {
 
   data.forEach(async (imageData, index) => {
     if (index >= 9) return; // Only process the first 9 images
-    console.log(start);
-    console.log(index);
-
     const imageBlock = createImageBlock(imageData, start + index, currentTab);
-
     const img = imageBlock.querySelector("img");
     img.onload = () => {
       if (index % 3 === 0) {
@@ -373,19 +384,7 @@ async function fetchImages() {
       document.getElementById(`image_id${start + index}`).value =
         imageData.image_id;
 
-      // Prepend captions
-      const captionContainer = document.querySelector(
-        `#image${start + index} .caption-container`,
-      );
-
-      if (captionContainer) {
-        captionContainer.prepend(
-          displayCaption("Baseline model", imageData.image_id),
-        );
-        captionContainer.prepend(displayCaption("Firefox", imageData.image_id));
-      } else {
-        console.error(`Caption container not found for image${start + index}`);
-      }
+      prependCaptions(start + index, imageData);
 
       // Attach submit event listener to the new form
       imageBlock
@@ -413,7 +412,6 @@ function createImageBlock(imageData, index, tab) {
 
   const humanCaption = taggedText("Human text", imageData.alt_text);
   captionDiv.appendChild(humanCaption);
-  console.log(imageData);
 
   if (tab === "to_train") {
     const trainCaption = taggedText(
