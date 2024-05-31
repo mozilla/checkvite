@@ -2,8 +2,7 @@ from datasets import DatasetDict
 from checkvite.db import PersistentOrderedDict
 
 
-DATASET_ID = "tarekziade/adversarial"
-# DATASET_ID = "Mozilla/alt-text-validation"
+DATASET_ID = "Mozilla/alt-text-validation"
 
 if __name__ == "__main__":
     data_dict = PersistentOrderedDict(
