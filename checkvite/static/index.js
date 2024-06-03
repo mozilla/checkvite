@@ -24,22 +24,23 @@ let isForwardListenerAttached = false;
 let statsHTML = null;
 let helpHTML = null;
 
+/**
+ * Blurs the contents of the current tab with a loading message.
+ * @param {string} message - The loading message to display.
+ */
 function blurTabContents(message) {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
     const container = document.createElement("div");
     container.className = "loader-container";
 
-    // Create the loader div
     const loader = document.createElement("div");
     loader.className = "loader";
 
-    // Create the text div
     const text = document.createElement("div");
     text.className = "loading-text";
     text.textContent = message;
 
-    // Append the loader and text to the container
     container.appendChild(loader);
     container.appendChild(text);
 
@@ -48,6 +49,9 @@ function blurTabContents(message) {
   });
 }
 
+/**
+ * Clears the blur effect and loading message from the tab contents.
+ */
 function clearBlurOnTabContents() {
   const tabContents = document.querySelectorAll(".tabcontent");
   tabContents.forEach((tab) => {
@@ -61,6 +65,11 @@ function clearBlurOnTabContents() {
   });
 }
 
+/**
+ * Converts a canvas element to a Blob object.
+ * @param {HTMLCanvasElement} canvas - The canvas element to convert.
+ * @returns {Promise<Blob>} A promise that resolves to a Blob object.
+ */
 function getCanvasBlob(canvas) {
   return new Promise(function(resolve, reject) {
     canvas.toBlob((blob) => {
@@ -69,6 +78,12 @@ function getCanvasBlob(canvas) {
   });
 }
 
+/**
+ * Fetches the caption for an image using the specified captioner.
+ * @param {string} captioner - The captioner to use ("Firefox" or other).
+ * @param {string} image_id - The ID of the image to caption.
+ * @returns {Promise<string>} A promise that resolves to the generated caption text.
+ */
 async function fetchCaption(captioner, image_id) {
   let pipeline;
   if (captioner === "Firefox") {
@@ -89,12 +104,25 @@ async function fetchCaption(captioner, image_id) {
   return res;
 }
 
+/**
+ * Creates a div element containing a tagged text.
+ * @param {string} tag - The tag to display.
+ * @param {string} text - The text to display.
+ * @returns {HTMLDivElement} The created div element.
+ */
 function taggedText(tag, text) {
   const captionDiv = document.createElement("div");
   captionDiv.innerHTML = `<span class='tag'>${tag}</span> ${text}`;
   return captionDiv;
 }
 
+/**
+ * Displays a caption button for an image.
+ * @param {string} captioner - The captioner to use.
+ * @param {string} image_id - The ID of the image to caption.
+ * @param {string} [class_prefix=""] - An optional prefix for the element IDs.
+ * @returns {HTMLDivElement} The created div element containing the button.
+ */
 function displayCaption(captioner, image_id, class_prefix = "") {
   var div = document.createElement("div");
   div.id = `${class_prefix}caption${captioner}${image_id}`;
@@ -123,19 +151,19 @@ function displayCaption(captioner, image_id, class_prefix = "") {
   return div;
 }
 
+/**
+ * Updates the progress bar based on fetched data.
+ * @returns {Promise<void>}
+ */
 async function updateProgressBar() {
   try {
-    // Fetch the data from the server; assuming the endpoint is '/stats'
     const response = await fetch("/stats");
     const data = await response.json();
 
-    // Extract values from the JSON response
     const { verified, need_training, to_verify } = data;
 
-    // Calculate total to compute percentages
     let total = verified + need_training + to_verify;
 
-    // Find segments
     let accurateSegment = document.querySelector(".segment.accurate");
     let biasedSegment = document.querySelector(".segment.biased");
     let notCheckedSegment = document.querySelector(".segment.not-checked");
@@ -144,7 +172,6 @@ async function updateProgressBar() {
     let biasedPercent = (need_training / total) * 100 || 0;
     let notCheckedPercent = (to_verify / total) * 100 || 0;
 
-    // Update segments with new data
     accurateSegment.style.width = `${accuratePercent}%`;
     accurateSegment.textContent = `${verified}`;
     biasedSegment.style.width = `${biasedPercent}%`;
@@ -156,6 +183,11 @@ async function updateProgressBar() {
   }
 }
 
+/**
+ * Changes the batch of images being displayed.
+ * @param {number} direction - The direction to change the batch (-1 for previous, 1 for next).
+ * @returns {Promise<void>}
+ */
 async function changeBatch(direction) {
   let newBatch = currentBatch + direction;
   if (newBatch < 1) {
@@ -167,6 +199,9 @@ async function changeBatch(direction) {
   await loadTab(currentTab);
 }
 
+/**
+ * Hides the navigation buttons and removes their event listeners.
+ */
 function hideNavigationButtons() {
   const backwardButton = document.getElementById("backward");
   const forwardButton = document.getElementById("forward");
@@ -174,7 +209,6 @@ function hideNavigationButtons() {
   backwardButton.style.display = "none";
   forwardButton.style.display = "none";
 
-  // Remove event listeners when buttons are hidden
   if (isBackwardListenerAttached) {
     backwardButton.removeEventListener("click", backwardClickHandler);
     isBackwardListenerAttached = false;
@@ -185,14 +219,25 @@ function hideNavigationButtons() {
   }
 }
 
+/**
+ * Handles the click event for the backward button.
+ * @returns {Promise<void>}
+ */
 async function backwardClickHandler() {
   await changeBatch(-1);
 }
 
+/**
+ * Handles the click event for the forward button.
+ * @returns {Promise<void>}
+ */
 async function forwardClickHandler() {
   await changeBatch(1);
 }
 
+/**
+ * Shows the navigation buttons and attaches their event listeners.
+ */
 function showNavigationButtons() {
   const backwardButton = document.getElementById("backward");
   const forwardButton = document.getElementById("forward");
@@ -211,6 +256,9 @@ function showNavigationButtons() {
   }
 }
 
+/**
+ * Updates the URL with the current tab and batch parameters.
+ */
 function updateURL() {
   var url = new URL(window.location);
   var params = new URLSearchParams(url.search);
@@ -220,10 +268,16 @@ function updateURL() {
   history.pushState({}, "", url.toString());
 }
 
+/**
+ * Opens the specified tab and loads its content.
+ * @param {Event} _evt - The event object.
+ * @param {string} tabName - The name of the tab to open.
+ * @param {number} [batch=1] - The batch number to load.
+ * @returns {Promise<void>}
+ */
 async function openTab(_evt, tabName, batch = 1) {
   if (currentTab === tabName && currentBatch === batch) return;
 
-  // Update the current tab, batch and start index
   currentBatch = batch;
   currentTab = tabName;
   start = 1 + (currentBatch - 1) * 9;
@@ -231,6 +285,11 @@ async function openTab(_evt, tabName, batch = 1) {
   await loadTab(tabName);
 }
 
+/**
+ * Loads the content for the specified tab.
+ * @param {string} tabName - The name of the tab to load.
+ * @returns {Promise<void>}
+ */
 async function loadTab(tabName) {
   document.querySelectorAll('a[id^="tab_"]').forEach((tab) => {
     if (tab.id === `tab_${tabName}`) {
@@ -250,9 +309,9 @@ async function loadTab(tabName) {
       const file = this.files[0];
       if (file) {
         imagePreview.src = URL.createObjectURL(file);
-        imagePreview.style.display = "block"; // Make sure to show the image element
+        imagePreview.style.display = "block";
         imagePreview.onload = function() {
-          URL.revokeObjectURL(imagePreview.src); // Free up memory
+          URL.revokeObjectURL(imagePreview.src);
         };
       }
     });
@@ -269,6 +328,10 @@ async function loadTab(tabName) {
   }
 }
 
+/**
+ * Initializes the page and loads the initial content.
+ * @returns {Promise<void>}
+ */
 async function initPage() {
   const tabs = ["to_verify", "verified", "to_train", "stats", "help"];
 
@@ -278,7 +341,6 @@ async function initPage() {
       .addEventListener("click", (event) => openTab(event, tab));
   });
 
-  // Loading model if needed.
   if (currentTab != "stats" && currentTab != "help" && !mozillaCaptioner) {
     blurTabContents("Loading models ~ takes a few mins on first load");
     mozillaCaptioner = await pipeline(
@@ -295,6 +357,11 @@ async function initPage() {
   await loadTab(currentTab);
 }
 
+/**
+ * Handles the form submission event.
+ * @param {Event} event - The form submission event.
+ * @returns {Promise<void>}
+ */
 async function submitForm(event) {
   event.preventDefault();
   const form = event.target;
@@ -309,7 +376,6 @@ async function submitForm(event) {
     body: formData,
   });
   if (response.ok) {
-    //alert('Form submitted successfully!');
     form.closest(".col-4").remove();
     reorganizeGrid(currentBatch);
   } else {
@@ -317,6 +383,10 @@ async function submitForm(event) {
   }
 }
 
+/**
+ * Reorganizes the grid of images after a form submission.
+ * @param {number} batch - The current batch number.
+ */
 function reorganizeGrid(batch) {
   const container = document.getElementById("images");
   const imageBlocks = Array.from(container.querySelectorAll(".col-4"));
@@ -335,6 +405,12 @@ function reorganizeGrid(batch) {
   fetchNewImage(batch, currentTab);
 }
 
+/**
+ * Fetches a new image to display in the grid.
+ * @param {number} batch - The current batch number.
+ * @param {string} tab - The current tab name.
+ * @returns {Promise<void>}
+ */
 async function fetchNewImage(batch, tab) {
   try {
     const response = await fetch(
@@ -365,6 +441,9 @@ async function fetchNewImage(batch, tab) {
   }
 }
 
+/**
+ * Renumbers the IDs of the image elements in the grid.
+ */
 function renumberImageIDs() {
   const container = document.getElementById("images");
 
@@ -379,6 +458,11 @@ function renumberImageIDs() {
   });
 }
 
+/**
+ * Prepends captions to the specified image element.
+ * @param {number} table_idx - The index of the table to update.
+ * @param {Object} imageData - The data of the image to caption.
+ */
 function prependCaptions(table_idx, imageData) {
   const captionContainer = document.querySelector(
     `#image${table_idx} .caption-container`,
@@ -393,6 +477,10 @@ function prependCaptions(table_idx, imageData) {
   }
 }
 
+/**
+ * Fetches and displays the images for the current tab and batch.
+ * @returns {Promise<void>}
+ */
 async function fetchImages() {
   const response = await fetch(
     `/get_images?batch=${currentBatch}&tab=${currentTab}`,
@@ -404,7 +492,7 @@ async function fetchImages() {
   let newRow;
 
   data.forEach(async (imageData, index) => {
-    if (index >= 9) return; // Only process the first 9 images
+    if (index >= 9) return;
     const imageBlock = createImageBlock(imageData, start + index, currentTab);
     const img = imageBlock.querySelector("img");
 
@@ -417,24 +505,28 @@ async function fetchImages() {
     img.onload = () => {
       newRow.appendChild(imageBlock);
 
-      // Set the value of the hidden input
       document.getElementById(`image_id${start + index}`).value =
         imageData.image_id;
 
       prependCaptions(start + index, imageData);
 
-      // Attach submit event listener to the new form
       imageBlock
         .querySelector("form.train-form")
         .addEventListener("submit", submitForm);
     };
   });
 
-  // Replace the old container with the new one
   const oldContainer = document.getElementById("images");
   oldContainer.replaceWith(newContainer);
 }
 
+/**
+ * Creates an image block element.
+ * @param {Object} imageData - The data of the image to display.
+ * @param {number} index - The index of the image.
+ * @param {string} tab - The current tab name.
+ * @returns {HTMLDivElement} The created image block element.
+ */
 function createImageBlock(imageData, index, tab) {
   const imageBlock = document.createElement("div");
   imageBlock.className = "image-block col-4";
@@ -519,7 +611,6 @@ function createImageBlock(imageData, index, tab) {
     form.appendChild(fieldset);
   }
 
-  // Add footer with buttons
   const footer = document.createElement("footer");
   footer.className = "is-right";
 
@@ -551,11 +642,20 @@ function createImageBlock(imageData, index, tab) {
   return imageBlock;
 }
 
+/**
+ * Loads content from the specified URL.
+ * @param {string} url - The URL to load content from.
+ * @returns {Promise<string>} A promise that resolves to the loaded content.
+ */
 async function loadContent(url) {
   const response = await fetch(url);
   return response.text();
 }
 
+/**
+ * Injects the stats content into the page.
+ * @returns {Promise<void>}
+ */
 async function injectStatsContent() {
   const container = document.getElementById("images");
   if (!statsHTML) {
@@ -564,6 +664,10 @@ async function injectStatsContent() {
   container.innerHTML = statsHTML;
 }
 
+/**
+ * Injects the help content into the page.
+ * @returns {Promise<void>}
+ */
 async function injectHelp() {
   const container = document.getElementById("images");
   if (!helpHTML) {
