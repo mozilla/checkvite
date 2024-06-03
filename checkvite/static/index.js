@@ -3,7 +3,14 @@ import {
   pipeline,
 } from "https://cdn.jsdelivr.net/npm/@xenova/transformers";
 
-//env.remoteHost = "https://model-hub.mozilla.org/";
+if (window.PRODUCTION) {
+  console.log("Running in production mode");
+  env.localModelPath = "/models/";
+  env.allowRemoteModels = false;
+  env.backends.onnx.wasm.wasmPaths = "/wasm/";
+} else {
+  console.log("Running in development mode");
+}
 
 let url = new URL(window.location);
 let params = new URLSearchParams(url.search);

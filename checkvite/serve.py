@@ -16,6 +16,7 @@ SECRET_KEY = "nYzdi-LJ4aqGqvCF28Yt2kVpWiGrWniBFLAGLPtRcx4="
 HERE = os.path.dirname(__file__)
 db = Database()
 routes = web.RouteTableDef()
+PRODUCTION = False
 
 
 @routes.get("/stats")
@@ -120,6 +121,7 @@ async def index(request):
         "batch": int(batch),
         "message": session.pop("message", ""),
         "tab": tab,
+        "production": PRODUCTION,
     }
 
 
@@ -208,14 +210,17 @@ aiohttp_jinja2.setup(
 
 
 def main():
+    global PRODUCTION
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--local", action="store_true", help="Set the mode to local.", default=False
     )
     args = parser.parse_args()
     if args.local:
+        PRODUCTION = 0
         web.run_app(app)
     else:
+        PRODUCTION = 1
         web.run_app(app, path=os.path.join(os.path.dirname(__file__), "aiohttp.socket"))
 
 
