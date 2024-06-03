@@ -8,10 +8,14 @@ import {
 let url = new URL(window.location);
 let params = new URLSearchParams(url.search);
 let currentTab = params.get("tab") || "to_verify";
-let batch = parseInt(params.get("batch") || 1);
-let start = 1 + (batch - 1) * 9;
+let currentBatch = parseInt(params.get("batch") || 1);
+let start = 1 + (currentBatch - 1) * 9;
 let mozillaCaptioner = null;
 let baseLineCaptioner = null;
+let isBackwardListenerAttached = false;
+let isForwardListenerAttached = false;
+let statsHTML = null;
+let helpHTML = null;
 
 function blurTabContents(message) {
   const tabContents = document.querySelectorAll(".tabcontent");
@@ -51,14 +55,16 @@ function clearBlurOnTabContents() {
 }
 
 async function fetchCaption(captioner, image_id) {
-  const url = `/images/${image_id}.png`;
+  //const url = `/images/${image_id}.png`;
+  const imageElement = document.getElementById(image_id);
+
   let pipeline;
   if (captioner === "Firefox") {
     pipeline = mozillaCaptioner;
   } else {
     pipeline = baseLineCaptioner;
   }
-  let res = await pipeline(url);
+  let res = await pipeline(imageElement);
   res = res[0].generated_text;
 
   // hack until we fix the model for that bug
@@ -147,55 +153,80 @@ function updateImageDisplay() {
   }
 }
 
-function changeBatch(direction) {
-  var url = new URL(window.location);
-  var params = new URLSearchParams(url.search);
-
-  var tab = params.get("tab") || "to_verify";
-  var batch = parseInt(params.get("batch") || 1);
-  batch += direction;
-  if (batch < 1) {
-    batch = 1;
+async function changeBatch(direction) {
+  let newBatch = currentBatch + direction;
+  if (newBatch < 1) {
+    newBatch = 1;
   }
-
-  params.set("tab", tab);
-  params.set("batch", batch);
-
-  url.search = params.toString();
-  window.location.href = url.toString();
+  currentBatch = newBatch;
+  start = 1 + (currentBatch - 1) * 9;
+  updateURL();
+  await loadTab(currentTab);
 }
 
 function hideNavigationButtons() {
-  document.getElementById("backward").style.display = "none";
-  document.getElementById("forward").style.display = "none";
+  const backwardButton = document.getElementById("backward");
+  const forwardButton = document.getElementById("forward");
+
+  backwardButton.style.display = "none";
+  forwardButton.style.display = "none";
+
+  // Remove event listeners when buttons are hidden
+  if (isBackwardListenerAttached) {
+    backwardButton.removeEventListener("click", backwardClickHandler);
+    isBackwardListenerAttached = false;
+  }
+  if (isForwardListenerAttached) {
+    forwardButton.removeEventListener("click", forwardClickHandler);
+    isForwardListenerAttached = false;
+  }
 }
 
-// Function to show navigation buttons
+async function backwardClickHandler() {
+  await changeBatch(-1);
+}
+
+async function forwardClickHandler() {
+  await changeBatch(1);
+}
+
 function showNavigationButtons() {
-  document.getElementById("backward").style.display = "inline-block";
-  document.getElementById("forward").style.display = "inline-block";
-  document.getElementById("backward").addEventListener("click", function() {
-    changeBatch(-1);
-  });
-  document.getElementById("forward").addEventListener("click", function() {
-    changeBatch(1);
-  });
+  const backwardButton = document.getElementById("backward");
+  const forwardButton = document.getElementById("forward");
+
+  backwardButton.style.display = "inline-block";
+  forwardButton.style.display = "inline-block";
+
+  if (backwardButton.style.display !== "none" && !isBackwardListenerAttached) {
+    backwardButton.addEventListener("click", backwardClickHandler);
+    isBackwardListenerAttached = true;
+  }
+
+  if (forwardButton.style.display !== "none" && !isForwardListenerAttached) {
+    forwardButton.addEventListener("click", forwardClickHandler);
+    isForwardListenerAttached = true;
+  }
 }
 
-async function openTab(_evt, tabName) {
-  if (currentTab === tabName) return;
-
-  // Update the current tab
-  currentTab = tabName;
-
+function updateURL() {
   // Update the URL parameters without reloading the page
   var url = new URL(window.location);
   var params = new URLSearchParams(url.search);
-  params.set("tab", tabName);
-  params.set("batch", "1"); // changing the tab resets the batch to 1
+  params.set("tab", currentTab);
+  params.set("batch", currentBatch);
   url.search = params.toString();
   history.pushState({}, "", url.toString());
+}
 
+async function openTab(_evt, tabName, batch = 1) {
+  if (currentTab === tabName && currentBatch === batch) return;
+
+  // Update the current tab, batch and start index
+  currentBatch = batch;
+  currentTab = tabName;
+  start = 1 + (currentBatch - 1) * 9;
+
+  updateURL();
   await loadTab(tabName);
 }
 
@@ -209,7 +240,7 @@ async function loadTab(tabName) {
   });
 
   if (tabName === "stats") {
-    injectStatsContent();
+    await injectStatsContent();
 
     const imageInput = document.getElementById("image");
     const imagePreview = document.getElementById("imagePreview");
@@ -228,7 +259,7 @@ async function loadTab(tabName) {
     updateProgressBar();
     hideNavigationButtons();
   } else if (tabName === "help") {
-    injectHelp();
+    await injectHelp();
 
     hideNavigationButtons();
   } else {
@@ -279,7 +310,7 @@ async function submitForm(event) {
   if (response.ok) {
     //alert('Form submitted successfully!');
     form.closest(".col-4").remove();
-    reorganizeGrid(batch);
+    reorganizeGrid(currentBatch);
   } else {
     alert("Form submission failed.");
   }
@@ -362,7 +393,9 @@ function prependCaptions(table_idx, imageData) {
 }
 
 async function fetchImages() {
-  const response = await fetch(`/get_images?batch=${batch}&tab=${currentTab}`);
+  const response = await fetch(
+    `/get_images?batch=${currentBatch}&tab=${currentTab}`,
+  );
   const data = await response.json();
 
   const newContainer = document.createElement("div");
@@ -516,132 +549,25 @@ function createImageBlock(imageData, index, tab) {
   return imageBlock;
 }
 
-function injectStatsContent() {
-  const container = document.getElementById("images");
-  container.innerHTML = `
-    <div class="card" style="margin-top: 15px; margin-bottom: 15px">
-      <header>
-        <h3>Training Stats</h3>
-      </header>
-      <div class="progress-bar">
-        <div
-          class="segment accurate"
-          data-tooltip="Acceptable"
-          style="width: 30%"
-        >
-          30%
-        </div>
-        <div
-          class="segment biased"
-          data-tooltip="Inacceptable"
-          style="width: 20%"
-        >
-          20%
-        </div>
-        <div
-          class="segment not-checked"
-          data-tooltip="Not checked yet"
-          style="width: 50%"
-        >
-          50%
-        </div>
-      </div>
-      <h3>Add a new image</h3>
-      <form action="/upload" method="post" enctype="multipart/form-data">
-        <label for="image">Image:</label>
-        <input type="file" id="image" name="image" required /><br /><br />
-        <label for="alt_text">Alt Text:</label>
-        <input
-          type="text"
-          id="alt_text"
-          name="alt_text"
-          placeholder="Enter alt text for the image"
-          required
-        /><br /><br />
-        <label for="license">License:</label>
-        <input
-          type="text"
-          id="license"
-          name="license"
-          value="APLv2"
-          required
-        /><br /><br />
-        <label for="source">Source:</label>
-        <input
-          type="text"
-          id="source"
-          name="source"
-          value="N/A"
-          required
-        /><br /><br />
-        <button type="submit">Upload</button>
-      </form>
-    </div>
-  `;
+async function loadContent(url) {
+  const response = await fetch(url);
+  return response.text();
 }
 
-function injectHelp() {
+async function injectStatsContent() {
   const container = document.getElementById("images");
-  container.innerHTML = `
-        <div class="card" style="margin-top: 15px; margin-bottom: 15px">
-          <header>
-            <h2>Guidelines to curate the dataset</h2>
-          </header>
+  if (!statsHTML) {
+    statsHTML = await loadContent("static/stats.html");
+  }
+  container.innerHTML = statsHTML;
+}
 
-    <p>Make sure you are on the <a href="/?tab=to_verify&batch=1">To Verify</a> tab of the site.</p>
-    <p>For each image, you will be evaluating the "Firefox" alt text as compared to alt text provided by a human (“Human”) and text provided by another model (“Baseline”).
-    If the “Firefox” alt text fits our defined criteria for "Acceptable" (see below), click "Accept" without filling out any other fields.
-    Click on the wand to generate the text.
-    If it fits the criteria below for “Unacceptable,” write an improved alt text description, select all applicable reasons for rejection, and then click Reject & Retrain.</p>
-
-    <h3>Acceptable vs. Unacceptable Alt Text</h3>
-    <p>We will be evaluating this model from the perspective of a content creator,</p>
-    <ul>
-     <li><strong>Acceptable</strong> I would use this description with no or minimal editing (adding or changing just a few words).</li>
-
-      <li><strong>Unacceptable</strong> I would rewrite this description significantly or entirely.</li>
-    </ul>
-
-    <h3>Reasons for Rejection</h3>
-    <p>If the description is unacceptable, please select each applicable reason, as defined below:</p>
-    <ul>
-        <li><strong>Inaccurate:</strong>
-            <ul>
-                <li>The content misidentifies people or objects from the image or contains false information.</li>
-                <li>The model inaccurately counts the number of people or objects. Instead of specific numbers, it should use general terms like “some” or “group”.</li>
-            </ul>
-        </li>
-        <li><strong>Assumptive:</strong> The model shouldn’t assume identity or culture. This means it should never mention the following, even at the expense of potential relevancy, because only the content creator can properly assess identity characteristics:
-            <ul>
-                <li>Gender: Should use “person” or “kid”/“child” instead</li>
-                <li>Race or nationality</li>
-                <li>Health or disability status</li>
-                <li>Historical, religious, or cultural context</li>
-            </ul>
-        </li>
-        <li><strong>Difficult to read:</strong>
-            <ul>
-                <li>Contains grammatical errors</li>
-                <li>Meaning is unclear</li>
-                <li>Uses overly complex words and sentence constructions</li>
-            </ul>
-        </li>
-        <li><strong>Not concise:</strong> The description is not a concise description of the image’s purpose
-            <ul>
-                <li>It is too long, wordy, or repetitive</li>
-                <li>It includes superfluous words like “image,” “icon”, or “picture”</li>
-            </ul>
-        </li>
-        <li><strong>Lacks details:</strong> Does not include the relevant, appropriate details that help readers gain a basic understanding of what the image depicts.</li>
-        <li><strong>Wrong tone:</strong> The tone of the writing is not neutral and conversational
-            <ul>
-                <li>Inflects strong emotions</li>
-                <li>Sentence structures sound unnatural or overly formal when read aloud</li>
-            </ul>
-        </li>
-    </ul>
-          </div>
-  `;
+async function injectHelp() {
+  const container = document.getElementById("images");
+  if (!helpHTML) {
+    helpHTML = await loadContent("static/help.html");
+  }
+  container.innerHTML = helpHTML;
 }
 
 initPage();

@@ -1,0 +1,50 @@
+<div class="card" style="margin-top: 15px; margin-bottom: 15px">
+  <header>
+    <h3>Training Stats</h3>
+  </header>
+  <div class="progress-bar">
+    <div class="segment accurate" data-tooltip="Acceptable" style="width: 30%">
+      30%
+    </div>
+    <div class="segment biased" data-tooltip="Inacceptable" style="width: 20%">
+      20%
+    </div>
+    <div
+      class="segment not-checked"
+      data-tooltip="Not checked yet"
+      style="width: 50%"
+    >
+      50%
+    </div>
+  </div>
+  <h3>Add a new image</h3>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <label for="image">Image:</label>
+    <input type="file" id="image" name="image" required /><br /><br />
+    <label for="alt_text">Alt Text:</label>
+    <input
+      type="text"
+      id="alt_text"
+      name="alt_text"
+      placeholder="Enter alt text for the image"
+      required
+    /><br /><br />
+    <label for="license">License:</label>
+    <input
+      type="text"
+      id="license"
+      name="license"
+      value="APLv2"
+      required
+    /><br /><br />
+    <label for="source">Source:</label>
+    <input
+      type="text"
+      id="source"
+      name="source"
+      value="N/A"
+      required
+    /><br /><br />
+    <button type="submit">Upload</button>
+  </form>
+</div>
