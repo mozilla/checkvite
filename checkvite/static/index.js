@@ -367,18 +367,21 @@ async function fetchImages() {
 
   const newContainer = document.createElement("div");
   newContainer.id = "images";
+  let newRow;
 
   data.forEach(async (imageData, index) => {
     if (index >= 9) return; // Only process the first 9 images
     const imageBlock = createImageBlock(imageData, start + index, currentTab);
     const img = imageBlock.querySelector("img");
+
+    if (index % 3 === 0) {
+      newRow = document.createElement("div");
+      newRow.className = "row";
+      newContainer.appendChild(newRow);
+    }
+
     img.onload = () => {
-      if (index % 3 === 0) {
-        const newRow = document.createElement("div");
-        newRow.className = "row";
-        newContainer.appendChild(newRow);
-      }
-      newContainer.lastChild.appendChild(imageBlock);
+      newRow.appendChild(imageBlock);
 
       // Set the value of the hidden input
       document.getElementById(`image_id${start + index}`).value =
