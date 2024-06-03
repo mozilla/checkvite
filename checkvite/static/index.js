@@ -61,23 +61,31 @@ function clearBlurOnTabContents() {
   });
 }
 
-async function fetchCaption(captioner, image_id) {
-  //const url = `/images/${image_id}.png`;
-  const imageElement = document.getElementById(image_id);
+function getCanvasBlob(canvas) {
+  return new Promise(function(resolve, reject) {
+    canvas.toBlob((blob) => {
+      resolve(blob);
+    });
+  });
+}
 
+async function fetchCaption(captioner, image_id) {
   let pipeline;
   if (captioner === "Firefox") {
     pipeline = mozillaCaptioner;
   } else {
     pipeline = baseLineCaptioner;
   }
-  let res = await pipeline(imageElement);
+  const img = document.getElementById(`actual_${image_id}`);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  context.drawImage(img, 0, 0, img.width, img.height);
+  const blob = await getCanvasBlob(canvas);
+  const blobUrl = URL.createObjectURL(blob);
+  let res = await pipeline(blobUrl);
   res = res[0].generated_text;
-
-  // hack until we fix the model for that bug
-  if (captioner === "Firefox" && res === "T") {
-    res = "The image seems to be a textual document.";
-  }
   return res;
 }
 
@@ -145,18 +153,6 @@ async function updateProgressBar() {
     notCheckedSegment.textContent = `${to_verify}`;
   } catch (error) {
     console.error("Failed to fetch stats: ", error);
-    // Optionally handle errors, e.g., show an error message on the UI
-  }
-}
-
-function updateImageDisplay() {
-  const preview = document.getElementById("imagePreview");
-  const file = document.getElementById("image").files[0];
-  if (file) {
-    preview.src = URL.createObjectURL(file);
-    preview.onload = function() {
-      URL.revokeObjectURL(preview.src); // Free up memory
-    };
   }
 }
 
@@ -216,7 +212,6 @@ function showNavigationButtons() {
 }
 
 function updateURL() {
-  // Update the URL parameters without reloading the page
   var url = new URL(window.location);
   var params = new URLSearchParams(url.search);
   params.set("tab", currentTab);
@@ -232,7 +227,6 @@ async function openTab(_evt, tabName, batch = 1) {
   currentBatch = batch;
   currentTab = tabName;
   start = 1 + (currentBatch - 1) * 9;
-
   updateURL();
   await loadTab(tabName);
 }
@@ -449,6 +443,7 @@ function createImageBlock(imageData, index, tab) {
   const img = document.createElement("img");
   img.src = imageData.image_url;
   img.className = "image";
+  img.id = `actual_${imageData.image_id}`;
 
   const captionDiv = document.createElement("div");
   captionDiv.className = "caption-container";
