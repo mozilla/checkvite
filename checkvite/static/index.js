@@ -60,7 +60,7 @@ class ImageCaptionApp {
       this.blurTabContents("Loading models ~ takes a few mins on first load");
       this.#mozillaCaptioner = await pipeline(
         "image-to-text",
-        "tarekziade/vit-base-patch16-224-in21k-distilgpt2",
+        "mozilla/distilvit",
       );
       this.#baseLineCaptioner = await pipeline(
         "image-to-text",
@@ -131,6 +131,9 @@ class ImageCaptionApp {
     const blobUrl = URL.createObjectURL(blob);
     let res = await pipeline(blobUrl);
     res = res[0].generated_text;
+    if (res === "T") {
+      res = "Text document.";
+    }
     return res;
   }
 
