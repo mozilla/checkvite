@@ -2,7 +2,6 @@
   <header>
     <h2>Guidelines to curate the dataset</h2>
   </header>
-
   <p>
     Make sure you are on the <a href="/?tab=to_verify&batch=1">To Verify</a> tab
     of the site.
@@ -10,7 +9,18 @@
   <p>
     For each image, you will be evaluating the "Firefox" alt text as compared to
     alt text provided by a human (“Human”) and text provided by another model
-    (“Baseline”). If the “Firefox” alt text fits our defined criteria for
+    (“Baseline”). 
+  </p>
+
+  <p>
+    The “Baseline” model is <a href="https://huggingface.co/nlpconnect/vit-gpt2-image-captioning">nlpconnect/vit-gpt2-image-captioning</a> which is slighly bigger than ours.
+  </p> 
+  <p>
+    The “Human” description is pulled from the source of the image. (Pexels, Flickr, etc.) and is not always there or good. It's just added as an indication.  
+  </p> 
+ 
+  <p>
+    If the “Firefox” alt text fits our defined criteria for
     "Acceptable" (see below), click "Accept" without filling out any other
     fields. Click on the wand to generate the text. If it fits the criteria
     below for “Unacceptable,” write an improved alt text description, select all
