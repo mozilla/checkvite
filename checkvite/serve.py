@@ -2,9 +2,11 @@ from io import BytesIO
 import os
 import asyncio
 import argparse
+import json
+import hashlib
 
 from PIL import Image as PILImage
-from aiohttp_session import setup, get_session
+from aiohttp_session import setup, get_session, new_session
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 from aiohttp import web
 import aiohttp_jinja2
@@ -17,10 +19,64 @@ HERE = os.path.dirname(__file__)
 db = Database()
 routes = web.RouteTableDef()
 PRODUCTION = False
+USERS_FILE = os.path.join(HERE, "users.json")
+
+
+def hash_password(password):
+    return hashlib.sha512(password.encode()).hexdigest()
+
+
+def load_users():
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, "r") as f:
+            return json.load(f)
+    return {}
+
+
+users = load_users()
+
+
+@routes.get("/login")
+@aiohttp_jinja2.template("login.html")
+async def login(request):
+    session = await get_session(request)
+    return {
+        "message": session.pop("message", ""),
+        "production": PRODUCTION,
+    }
+
+
+@routes.post("/login")
+async def handle_login(request):
+    data = await request.post()
+    username = data.get("username")
+    password = data.get("password")
+    session = await new_session(request)
+
+    if username in users and users[username] == hash_password(password):
+        session["username"] = username
+        raise web.HTTPFound("/")
+    else:
+        session["message"] = "Invalid username or password."
+        raise web.HTTPFound("/login")
+
+
+@routes.get("/logout")
+async def handle_logout(request):
+    session = await get_session(request)
+    session.invalidate()
+    raise web.HTTPFound("/")
+
+
+@web.middleware
+async def auth_middleware(request, handler):
+    session = await get_session(request)
+    request["user"] = session.get("username")
+    return await handler(request)
 
 
 @routes.get("/stats")
-async def stats_handler(request_):
+async def stats_handler(request):
     response_data = {
         "need_training": db.need_training,
         "verified": db.verified,
@@ -122,13 +178,16 @@ async def index(request):
         "message": session.pop("message", ""),
         "tab": tab,
         "production": PRODUCTION,
+        "user": session.get("username", None),
     }
 
 
 @routes.post("/train")
 async def handle_train(request):
-    data = await request.post()
     session = await get_session(request)
+    if not session.get("username"):
+        raise web.HTTPFound("/login")
+    data = await request.post()
     image_id = int(data["image_id"])
 
     action = data.get("action", "discard")
@@ -157,6 +216,10 @@ async def handle_train(request):
 
 @routes.post("/upload")
 async def handle_upload(request):
+    session = await get_session(request)
+    if not session.get("username"):
+        raise web.HTTPFound("/login")
+
     reader = await request.multipart()
     image_data = await reader.next()
     pil_image = PILImage.open(BytesIO(await image_data.read()))

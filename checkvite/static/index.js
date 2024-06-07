@@ -3,7 +3,7 @@ import {
   pipeline,
 } from "https://cdn.jsdelivr.net/npm/@xenova/transformers";
 
-class ImageCaptionApp {
+export class ImageCaptionApp {
   #currentTab;
   #currentBatch;
   #start;
@@ -13,6 +13,7 @@ class ImageCaptionApp {
   #isForwardListenerAttached;
   #statsHTML;
   #helpHTML;
+  #user;
 
   constructor() {
     this.#initializeEnvironment();
@@ -42,9 +43,16 @@ class ImageCaptionApp {
     this.#isForwardListenerAttached = false;
     this.#statsHTML = null;
     this.#helpHTML = null;
+    this.#user = null;
   }
 
-  async initPage() {
+  async initPage(user) {
+    if (user === "None") {
+      user = null;
+    }
+    console.log("Initializing page for user", user);
+    this.#user = user;
+
     const tabs = ["to_verify", "verified", "to_train", "stats", "help"];
     tabs.forEach((tab) => {
       document
@@ -520,7 +528,7 @@ class ImageCaptionApp {
     hiddenInput.value = imageData.image_id;
     form.appendChild(hiddenInput);
 
-    if (tab !== "to_train") {
+    if (tab !== "to_train" && this.#user) {
       const feedbackHeader = document.createElement("h4");
       feedbackHeader.textContent = "Feedback";
       form.appendChild(feedbackHeader);
@@ -567,7 +575,7 @@ class ImageCaptionApp {
     const footer = document.createElement("footer");
     footer.className = "is-right";
 
-    if (tab !== "verified") {
+    if (tab !== "verified" && this.#user) {
       const acceptButton = document.createElement("button");
       acceptButton.name = "discard";
       acceptButton.type = "submit";
@@ -578,7 +586,7 @@ class ImageCaptionApp {
       footer.appendChild(acceptButton);
     }
 
-    if (tab !== "to_train") {
+    if (tab !== "to_train" && this.#user) {
       const rejectButton = document.createElement("button");
       rejectButton.name = "train";
       rejectButton.type = "submit";
@@ -616,6 +624,3 @@ class ImageCaptionApp {
     container.innerHTML = this.#helpHTML;
   }
 }
-
-const app = new ImageCaptionApp();
-await app.initPage();

@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+  <head>
+    <title>{% block title %}PDF.js Model Tweaking{% endblock %}</title>
+    <link href="/static/style.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://unpkg.com/chota@latest" />
+  </head>
+  <body>
+    <div class="container">
+      <nav class="nav">
+        <div class="nav-left">
+          <!--img src="/static/moz.svg" style="height: 30px" /-->
+          <a class="brand" href="#">
+            PDF.js
+          </a>
+          <div class="tabs">
+            <a id="tab_to_verify" class="button outline tablinks">To Verify</a>
+            <a id="tab_verified" class="button outline tablinks">Verified</a>
+            <a id="tab_to_train" class="button outline tablinks">To Train</a>
+            <a id="tab_stats" class="button outline tablinks">Stats</a>
+            <a id="tab_help" class="button outline tablinks">Guidelines</a>
+            <a class="button outline tablinks" id="backward">⬅️</a>
+            <a class="button outline tablinks" id="forward">➡️</a>
+          </div>
+        </div>
+        <div class="nav-right">
+          {% if user %}
+          <a class="button outline" href="/logout">{{user}} | logout</a>
+          {% else %}
+          <a class="button outline" href="/login">Login</a>
+          {% endif %}
+        </div>
+      </nav>
+      <br />
+
+      {% if message %}
+      <div class="row">
+        <div class="col-12">
+          <h4>{{ message }}</h4>
+        </div>
+      </div>
+      {% endif %} {% block content %}{% endblock %}
+    </div>
+  </body>
+</html>

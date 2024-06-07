@@ -101,6 +101,12 @@ header {
   background-color: #f1f1f1;
 }
 
+a.button {
+  white-space: nowrap; /* Prevents wrapping */
+  overflow: hidden; /* Ensures that overflowing content is hidden */
+  text-overflow: ellipsis; /* Adds ellipsis (...) at the end if the text is too long */
+}
+
 .tab button {
   background-color: inherit;
   float: left;

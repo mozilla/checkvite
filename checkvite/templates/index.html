@@ -1,44 +1,17 @@
-<!doctype html>
-<html>
-  <head>
-    <title>PDF.js model tweaking</title>
-    <script src="/static/index.js" type="module"></script>
-    <link href="/static/style.css" rel="stylesheet" />
-    <link rel="stylesheet" href="https://unpkg.com/chota@latest" />
-  </head>
-  <body>
-    <script>
-      window.PRODUCTION = {{ production }};
-    </script>
+{% extends "base.html" %} {% block title %}PDF.js Model Tweaking{% endblock %}
+{% block content %}
+<script type="module">
 
-    <div class="container">
-      <nav class="nav">
-        <div class="nav-left">
-          <a class="brand" href="#">
-            <img src="/static/moz.svg" style="height: 30px" />PDF.js alt text
-          </a>
-          <div class="tabs">
-            <a id="tab_to_verify" class="button outline tablinks">To Verify</a>
-            <a id="tab_verified" class="button outline tablinks">Verified</a>
-            <a id="tab_to_train" class="button outline tablinks">To Train</a>
-            <a id="tab_stats" class="button outline tablinks">Stats</a>
-            <a id="tab_help" class="button outline tablinks">Guidelines</a>
-            <a class="button outline tablinks" id="backward">⬅️</a>
-            <a class="button outline tablinks" id="forward">➡️</a>
-          </div>
-        </div>
-      </nav>
-      <br />
+  import { ImageCaptionApp } from '/static/index.js';
 
-      {% if message %}
-      <div class="row">
-        <div class="col-12">
-          <h4>{{ message }}</h4>
-        </div>
-      </div>
-      {% endif %}
+  window.PRODUCTION = {{ production }};
 
-      <div id="images" class="tabcontent"></div>
-    </div>
-  </body>
-</html>
+  const app = new ImageCaptionApp();
+  await app.initPage('{{ user }}');
+
+</script>
+
+
+
+<div id="images" class="tabcontent"></div>
+{% endblock %}
