@@ -473,6 +473,23 @@ class ImageCaptionApp {
     img.className = "image";
     img.id = `actual_${imageData.image_id}`;
 
+    // Add event listener for zoom functionality
+    img.addEventListener("click", function() {
+      const zoomedImage = document.createElement("div");
+      zoomedImage.className = "zoomed-image";
+      const zoomedImg = document.createElement("img");
+      zoomedImg.src = imageData.image_url;
+      zoomedImg.className = "zoomed-img";
+      zoomedImage.appendChild(zoomedImg);
+
+      // Add click event to remove the zoomed image
+      zoomedImage.addEventListener("click", function() {
+        document.body.removeChild(zoomedImage);
+      });
+
+      document.body.appendChild(zoomedImage);
+    });
+
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
 
