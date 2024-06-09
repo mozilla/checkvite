@@ -185,7 +185,6 @@ export class ImageCaptionApp {
     try {
       const response = await fetch("/stats");
       const data = await response.json();
-
       const {
         verified,
         need_training,
@@ -193,8 +192,43 @@ export class ImageCaptionApp {
         u_verified,
         u_need_training,
         u_to_verify,
+        rejection_reasons,
       } = data;
+      // Handle the rejection stats
+      const rejectionContainer = document.getElementById("rejectionStats");
+      rejectionContainer.innerHTML = ""; // Clear previous contents
 
+      const maxCount = Math.max(...Object.values(rejection_reasons));
+
+      Object.entries(rejection_reasons).forEach(([reason, count]) => {
+        const wrapperDiv = document.createElement("div");
+        wrapperDiv.style.width = "100%";
+        wrapperDiv.style.backgroundColor = "#d3d3d3";
+        wrapperDiv.style.margin = "5px 0";
+        wrapperDiv.style.position = "relative";
+        wrapperDiv.style.height = "30px"; // Added height for better visibility
+
+        const rejectionDiv = document.createElement("div");
+        rejectionDiv.style.width = `${(count / maxCount) * 100}%`;
+        rejectionDiv.style.height = "100%";
+        rejectionDiv.style.backgroundColor = "lightblue";
+        rejectionDiv.style.position = "absolute";
+        rejectionDiv.style.top = "0";
+        rejectionDiv.style.left = "0";
+
+        const textDiv = document.createElement("div");
+        textDiv.style.position = "absolute";
+        textDiv.style.top = "50%";
+        textDiv.style.left = "10px";
+        textDiv.style.transform = "translateY(-50%)"; // Center the text vertically
+        textDiv.style.whiteSpace = "nowrap";
+        textDiv.style.color = "white";
+        textDiv.textContent = `${reason}: ${count}`;
+
+        wrapperDiv.appendChild(rejectionDiv);
+        wrapperDiv.appendChild(textDiv);
+        rejectionContainer.appendChild(wrapperDiv);
+      });
       let total = verified + need_training + to_verify;
       let u_total = u_verified + u_need_training + u_to_verify;
 

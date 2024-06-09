@@ -117,6 +117,7 @@ async def stats_handler(request):
         user = get_user(username)
         response_data.update(db.get_split_stats(user.get_data_split()))
 
+    response_data["rejection_reasons"] = db.get_rejection_stats()
     return web.json_response(response_data)
 
 

@@ -1,57 +1,68 @@
 <div class="row">
-  <div class=".col-6">
-    <div class="card" style="margin-top: 15px; margin-bottom: 15px">
-      <header>
-        <h4>Global stats</h4>
-      </header>
-
-      <div class="chart-container">
-        <canvas id="overallProgressChart"></canvas>
-      </div>
+  <div class=".col-4">
+    <header>
+      <h4>Global stats</h4>
+    </header>
+    <div class="chart-container">
+      <canvas id="overallProgressChart"></canvas>
     </div>
   </div>
 
-  <div class=".col-6" id="user-progress">
-    <div class="card" style="margin-top: 15px; margin-bottom: 15px">
-      <header>
-        <h4>Your stats</h4>
-      </header>
-      <div class="chart-container">
-        <canvas id="userProgressChart"></canvas>
-      </div>
+  <div class=".col-4" id="user-progress">
+    <header>
+      <h4>Your stats</h4>
+    </header>
+    <div class="chart-container">
+      <canvas id="userProgressChart"></canvas>
     </div>
+  </div>
+
+  <div class=".col-4">
+    <header>
+      <h4>Rejection reasons</h4>
+    </header>
+    <div id="rejectionStats" style="width: 100%"></div>
   </div>
 </div>
 
-<div>
-  <h3>Add a new image</h3>
-  <form action="/upload" method="post" enctype="multipart/form-data">
-    <label for="image">Image:</label>
-    <input type="file" id="image" name="image" required /><br /><br />
-    <label for="alt_text">Alt Text:</label>
-    <input
-      type="text"
-      id="alt_text"
-      name="alt_text"
-      placeholder="Enter alt text for the image"
-      required
-    /><br /><br />
-    <label for="license">License:</label>
-    <input
-      type="text"
-      id="license"
-      name="license"
-      value="APLv2"
-      required
-    /><br /><br />
-    <label for="source">Source:</label>
-    <input
-      type="text"
-      id="source"
-      name="source"
-      value="N/A"
-      required
-    /><br /><br />
-    <button type="submit">Upload</button>
-  </form>
+<div class="card" style="margin-top: 20px; margin-bottom: 20px">
+  <div class=".col-12">
+    <header>
+      <h3>Add a new image</h3>
+    </header>
+    <form
+      style="width: 100%"
+      action="/upload"
+      method="post"
+      enctype="multipart/form-data"
+    >
+      <label for="image">Image:</label>
+      <input type="file" id="image" name="image" required /><br /><br />
+      <label for="alt_text">Alt Text:</label>
+      <input
+        type="text"
+        id="alt_text"
+        name="alt_text"
+        placeholder="Enter alt text for the image"
+        required
+      /><br /><br />
+      <label for="license">License:</label>
+      <input
+        type="text"
+        id="license"
+        name="license"
+        value="APLv2"
+        required
+      /><br /><br />
+      <label for="source">Source:</label>
+      <input
+        type="text"
+        id="source"
+        name="source"
+        value="N/A"
+        required
+      /><br /><br />
+      <button type="submit">Upload</button>
+    </form>
+  </div>
 </div>

@@ -248,6 +248,16 @@ class Database:
     def to_verify(self):
         return len(self.data_dict) - self.verified
 
+    def get_rejection_stats(self):
+        rejection_stats = {}
+        for entry in self.data_dict.values():
+            for reason in entry.get("rejection_reasons", []):
+                if reason in rejection_stats:
+                    rejection_stats[reason] += 1
+                else:
+                    rejection_stats[reason] = 1
+        return rejection_stats
+
     def get_split_stats(self, split):
         items = list(self.data_dict.values())[split[0] : split[1]]
         verified = sum(1 for item in items if item.get("verified") == 1)
