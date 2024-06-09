@@ -248,6 +248,18 @@ class Database:
     def to_verify(self):
         return len(self.data_dict) - self.verified
 
+    def get_split_stats(self, split):
+        items = list(self.data_dict.values())[split[0] : split[1]]
+        verified = sum(1 for item in items if item.get("verified") == 1)
+
+        return {
+            "u_need_training": sum(
+                1 for item in items if item.get("need_training") == 1
+            ),
+            "u_verified": verified,
+            "u_to_verify": len(items) - verified,
+        }
+
     def __getitem__(self, key):
         return self.data_dict[key]
 
@@ -264,11 +276,22 @@ class Database:
         return list(self.get_images(verified, need_training, index, 1, transform))[0]
 
     def get_images(
-        self, verified=False, need_training=False, start=0, amount=9, transform=None
+        self,
+        verified=False,
+        need_training=False,
+        start=0,
+        amount=9,
+        transform=None,
+        split=None,
     ):
+        if split is not None:
+            values = list(self.data_dict.values())[split[0] : split[1]]
+        else:
+            values = self.data_dict.values()
+
         filtered_entries = (
             entry
-            for entry in self.data_dict.values()
+            for entry in values
             if entry["verified"] == verified and entry["need_training"] == need_training
         )
 

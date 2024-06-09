@@ -175,17 +175,20 @@ a.button {
   transform: translateX(-50%) translateY(-20px); /* Adjust to make tooltip appear slightly above */
 }
 
-.accurate {
+.accurate,
+.u-accurate {
   background-color: green;
   border-top-left-radius: 15px;
   border-bottom-left-radius: 15px;
 }
 
-.biased {
+.biased,
+.u-biased {
   background-color: red;
 }
 
-.not-checked {
+.not-checked,
+.u-not-checked {
   background-color: grey;
   border-top-right-radius: 15px;
   border-bottom-right-radius: 15px;
@@ -221,4 +224,8 @@ a.button {
   max-width: 95%;
   max-height: 95%;
   transform: scale(1.5); /* Make the image zoom bigger */
+}
+
+.chart-container {
+  width: 100%;
 }

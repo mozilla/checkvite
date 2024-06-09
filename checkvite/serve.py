@@ -22,6 +22,10 @@ PRODUCTION = False
 USERS_FILE = os.path.join(HERE, "users.json")
 
 
+class UserNotFoundError(Exception):
+    pass
+
+
 def hash_password(password):
     return hashlib.sha512(password.encode()).hexdigest()
 
@@ -29,11 +33,31 @@ def hash_password(password):
 def load_users():
     if os.path.exists(USERS_FILE):
         with open(USERS_FILE, "r") as f:
-            return json.load(f)
+            return {k: User(k, v) for k, v in json.load(f).items()}
     return {}
 
 
+class User:
+    def __init__(self, username, data):
+        self.username = username
+        self.hash_password = data["password"]
+        self.data_split = data["data_split"]
+
+    def check_password(self, password):
+        return self.hash_password == hash_password(password)
+
+    def get_data_split(self):
+        return self.data_split
+
+
 users = load_users()
+
+
+def get_user(username):
+    for user in users.values():
+        if user.username == username:
+            return user
+    raise UserNotFoundError(username)
 
 
 @routes.get("/login")
@@ -53,7 +77,7 @@ async def handle_login(request):
     password = data.get("password")
     session = await new_session(request)
 
-    if username in users and users[username] == hash_password(password):
+    if username in users and users[username].check_password(password):
         session["username"] = username
         raise web.HTTPFound("/")
     else:
@@ -77,11 +101,22 @@ async def auth_middleware(request, handler):
 
 @routes.get("/stats")
 async def stats_handler(request):
+    session = await get_session(request)
+    username = session.get("username", None)
+
     response_data = {
         "need_training": db.need_training,
         "verified": db.verified,
         "to_verify": db.to_verify,
+        "u_need_training": 0,
+        "u_verified": 0,
+        "u_to_verify": 0,
     }
+
+    if username is not None:
+        user = get_user(username)
+        response_data.update(db.get_split_stats(user.get_data_split()))
+
     return web.json_response(response_data)
 
 
@@ -133,6 +168,9 @@ async def get_single_image(request):
 
 @routes.get("/get_images")
 async def get_random_images(request):
+    session = await get_session(request)
+    username = session.get("username", None)
+
     tab = request.query.get("tab", "to_verify")
 
     if tab == "to_verify":
@@ -156,11 +194,17 @@ async def get_random_images(request):
             "inclusive_alt_text": entry["inclusive_alt_text"],
         }
 
+    if username:
+        data_split = get_user(username).get_data_split()
+    else:
+        data_split = None
+
     images = db.get_images(
         verified=verified,
         need_training=need_training,
         start=start,
         transform=_transform,
+        split=data_split,
     )
 
     return web.json_response(list(images))

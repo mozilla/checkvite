@@ -3,6 +3,8 @@ import {
   pipeline,
 } from "https://cdn.jsdelivr.net/npm/@xenova/transformers";
 
+import "https://cdn.jsdelivr.net/npm/chart.js";
+
 export class ImageCaptionApp {
   #currentTab;
   #currentBatch;
@@ -184,24 +186,102 @@ export class ImageCaptionApp {
       const response = await fetch("/stats");
       const data = await response.json();
 
-      const { verified, need_training, to_verify } = data;
+      const {
+        verified,
+        need_training,
+        to_verify,
+        u_verified,
+        u_need_training,
+        u_to_verify,
+      } = data;
 
       let total = verified + need_training + to_verify;
+      let u_total = u_verified + u_need_training + u_to_verify;
 
-      let accurateSegment = document.querySelector(".segment.accurate");
-      let biasedSegment = document.querySelector(".segment.biased");
-      let notCheckedSegment = document.querySelector(".segment.not-checked");
+      // Data for the overall progress chart
+      const overallData = {
+        labels: ["Accurate", "Biased", "Not Checked"],
+        datasets: [
+          {
+            data: [verified, need_training, to_verify],
+            backgroundColor: ["green", "red", "grey"],
+          },
+        ],
+      };
 
-      let accuratePercent = (verified / total) * 100 || 0;
-      let biasedPercent = (need_training / total) * 100 || 0;
-      let notCheckedPercent = (to_verify / total) * 100 || 0;
+      // Create the overall progress pie chart
+      const overallCtx = document
+        .getElementById("overallProgressChart")
+        .getContext("2d");
+      new Chart(overallCtx, {
+        type: "pie",
+        data: overallData,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.label || "";
+                  if (label) {
+                    label += ": ";
+                  }
+                  label += context.raw;
+                  return label;
+                },
+              },
+            },
+          },
+        },
+      });
 
-      accurateSegment.style.width = `${accuratePercent}%`;
-      accurateSegment.textContent = `${verified}`;
-      biasedSegment.style.width = `${biasedPercent}%`;
-      biasedSegment.textContent = `${need_training}`;
-      notCheckedSegment.style.width = `${notCheckedPercent}%`;
-      notCheckedSegment.textContent = `${to_verify}`;
+      if (u_total == 0) {
+        document.getElementById("user-progress").style.display = "none";
+        return;
+      }
+
+      // Data for the user progress chart
+      const userData = {
+        labels: ["Accurate", "Biased", "Not Checked"],
+        datasets: [
+          {
+            data: [u_verified, u_need_training, u_to_verify],
+            backgroundColor: ["green", "red", "grey"],
+          },
+        ],
+      };
+
+      // Create the user progress pie chart
+      const userCtx = document
+        .getElementById("userProgressChart")
+        .getContext("2d");
+      new Chart(userCtx, {
+        type: "pie",
+        data: userData,
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              position: "bottom",
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  let label = context.label || "";
+                  if (label) {
+                    label += ": ";
+                  }
+                  label += context.raw;
+                  return label;
+                },
+              },
+            },
+          },
+        },
+      });
     } catch (error) {
       console.error("Failed to fetch stats: ", error);
     }
