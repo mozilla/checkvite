@@ -261,7 +261,6 @@ class Database:
     def get_split_stats(self, split):
         items = list(self.data_dict.values())[split[0] : split[1]]
         verified = sum(1 for item in items if item.get("verified") == 1)
-
         return {
             "u_need_training": sum(
                 1 for item in items if item.get("need_training") == 1

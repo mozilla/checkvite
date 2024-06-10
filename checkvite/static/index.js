@@ -189,6 +189,7 @@ export class ImageCaptionApp {
         verified,
         need_training,
         to_verify,
+        acceptance_rate,
         u_verified,
         u_need_training,
         u_to_verify,
@@ -231,6 +232,9 @@ export class ImageCaptionApp {
       });
       let total = verified + need_training + to_verify;
       let u_total = u_verified + u_need_training + u_to_verify;
+
+      document.getElementById("acceptanceRate").textContent =
+        `${acceptance_rate}%`;
 
       // Data for the overall progress chart
       const overallData = {

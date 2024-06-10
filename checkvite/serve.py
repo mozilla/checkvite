@@ -108,6 +108,8 @@ async def stats_handler(request):
         "need_training": db.need_training,
         "verified": db.verified,
         "to_verify": db.to_verify,
+        "acceptance_rate": "%.2f"
+        % (db.verified / (db.verified + db.need_training) * 100),
         "u_need_training": 0,
         "u_verified": 0,
         "u_to_verify": 0,

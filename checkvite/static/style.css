@@ -229,3 +229,11 @@ a.button {
 .chart-container {
   width: 100%;
 }
+
+#acceptanceRate {
+  width: 100%;
+  font-size: 300%;
+  font-weight: bold;
+  padding: 10px;
+  margin: 20px;
+}
