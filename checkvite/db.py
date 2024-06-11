@@ -246,7 +246,7 @@ class Database:
 
     @property
     def to_verify(self):
-        return len(self.data_dict) - self.verified
+        return len(self.data_dict) - (self.verified + self.need_training)
 
     def get_rejection_stats(self):
         rejection_stats = {}
@@ -261,12 +261,11 @@ class Database:
     def get_split_stats(self, split):
         items = list(self.data_dict.values())[split[0] : split[1]]
         verified = sum(1 for item in items if item.get("verified") == 1)
+        need_training = sum(1 for item in items if item.get("need_training") == 1)
         return {
-            "u_need_training": sum(
-                1 for item in items if item.get("need_training") == 1
-            ),
+            "u_need_training": need_training,
             "u_verified": verified,
-            "u_to_verify": len(items) - verified,
+            "u_to_verify": len(items) - (verified + need_training),
         }
 
     def __getitem__(self, key):
