@@ -197,7 +197,7 @@ async def get_random_images(request):
             "inclusive_alt_text": entry["inclusive_alt_text"],
         }
 
-    if username:
+    if username and username != "admin":
         data_split = get_user(username).get_data_split()
     else:
         data_split = None
