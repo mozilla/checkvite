@@ -292,10 +292,14 @@ class Database:
         transform=None,
         split=None,
     ):
+        sorted_entries = list(
+            sorted(self.data_dict.values(), key=lambda x: -x["image_id"])
+        )
+
         if split is not None:
-            values = list(self.data_dict.values())[split[0] : split[1]]
+            values = sorted_entries[split[0] : split[1]]
         else:
-            values = self.data_dict.values()
+            values = sorted_entries
 
         filtered_entries = (
             entry
