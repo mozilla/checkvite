@@ -202,15 +202,18 @@ async def get_random_images(request):
     else:
         data_split = None
 
-    images = db.get_images(
-        verified=verified,
-        need_training=need_training,
-        start=start,
-        transform=_transform,
-        split=data_split,
+    images = list(
+        db.get_images(
+            verified=verified,
+            need_training=need_training,
+            start=start,
+            transform=_transform,
+            split=data_split,
+            username=username,
+        )
     )
 
-    return web.json_response(list(images))
+    return web.json_response(images)
 
 
 @routes.get("/")

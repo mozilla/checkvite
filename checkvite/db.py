@@ -309,19 +309,41 @@ class Database:
         amount=9,
         transform=None,
         split=None,
+        username=None,
     ):
-        sorted_entries = list(
-            sorted(
-                self.data_dict.values(),
-                key=lambda x: (x["modified_date"], -x["image_id"]),
-            )
-        )
+        def sort_key(entry):
+            modified_date = entry.get("modified_date")
+
+            if modified_date is not None:
+                date = pd.Timestamp(modified_date).timestamp()
+            else:
+                date = pd.Timestamp(0).timestamp()
+
+            return (-date, -entry["image_id"])
+
+        sorted_entries = list(sorted(self.data_dict.values(), key=sort_key))
 
         if split is not None:
             values = sorted_entries[split[0] : split[1]]
         else:
             values = sorted_entries
 
+        current_ids = [v["image_id"] for v in values]
+
+        # added images that were added by the user
+        if username is not None and username != "admin":
+            for entry in sorted_entries:
+                if (
+                    entry["image_id"] not in current_ids
+                    and entry["added_by"] == username
+                ):
+                    values.append(entry)
+                    current_ids.append(entry["image_id"])
+
+        # sort again
+        values = list(sorted(values, key=sort_key))
+
+        # filter if needed
         filtered_entries = (
             entry
             for entry in values
