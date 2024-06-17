@@ -5,6 +5,8 @@ from collections import OrderedDict
 import sqlite3
 import time
 import json
+from datetime import datetime
+import pandas as pd
 
 from tqdm import tqdm
 from PIL import Image
@@ -19,6 +21,14 @@ from datasets import (
     Sequence,
 )
 
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, pd.Timestamp):
+            return obj.isoformat()
+        return super().default(obj)
+
+
 features = Features(
     {
         "dataset": Value("string"),
@@ -31,6 +41,9 @@ features = Features(
         "need_training": ClassLabel(names=["no", "yes"]),
         "verified": ClassLabel(names=["no", "yes"]),
         "rejection_reasons": Sequence(Value("string")),
+        "added_by": Value("string"),
+        "verified_by": Value("string"),
+        "modified_date": Value("timestamp[ns]"),
     }
 )
 
@@ -116,9 +129,11 @@ class PersistentOrderedDict(OrderedDict):
             raise ValueError("Cannot set item in read-only mode")
         key = str(key)
         value = self._convert_image_to_path(key, value)
+        value["modified_date"] = datetime.now().isoformat()
         super().__setitem__(key, value)
         self.cursor.execute(
-            "REPLACE INTO data (key, value) VALUES (?, ?)", (key, json.dumps(value))
+            "REPLACE INTO data (key, value) VALUES (?, ?)",
+            (key, json.dumps(value, cls=CustomJSONEncoder)),
         )
         self.conn.commit()
         self._update_local_timestamp()
@@ -159,7 +174,10 @@ class PersistentOrderedDict(OrderedDict):
             super().__setitem__(str(key), item)
         self.cursor.executemany(
             "REPLACE INTO data (key, value) VALUES (?, ?)",
-            [(str(key), json.dumps(self[key])) for key in self.keys()],
+            [
+                (str(key), json.dumps(self[key], cls=CustomJSONEncoder))
+                for key in self.keys()
+            ],
         )
         self.conn.commit()
         self._update_local_timestamp()
@@ -293,7 +311,10 @@ class Database:
         split=None,
     ):
         sorted_entries = list(
-            sorted(self.data_dict.values(), key=lambda x: -x["image_id"])
+            sorted(
+                self.data_dict.values(),
+                key=lambda x: (x["modified_date"], -x["image_id"]),
+            )
         )
 
         if split is not None:

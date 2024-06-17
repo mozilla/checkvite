@@ -232,30 +232,30 @@ async def index(request):
 @routes.post("/train")
 async def handle_train(request):
     session = await get_session(request)
-    if not session.get("username"):
+    username = session.get("username")
+
+    if not username:
         raise web.HTTPFound("/login")
+
     data = await request.post()
     image_id = int(data["image_id"])
 
     action = data.get("action", "discard")
+
+    fields = {"inclusive_alt_text": data.get("caption", ""), "verified_by": username}
+
     if action == "train":
-        verified = 0
-        need_training = 1
-        rejection_reasons = data.getall("rejection_reason", [])
+        fields["verified"] = 0
+        fields["need_training"] = 1
+        fields["rejection_reasons"] = data.getall("rejection_reason", [])
         session["message"] = "Added for training."
     else:
-        need_training = 0
-        verified = 1
-        rejection_reasons = []
+        fields["need_training"] = 0
+        fields["verified"] = 1
+        fields["rejection_reasons"] = []
         session["message"] = "Caption validated."
 
-    db.update_image(
-        image_id,
-        inclusive_alt_text=data.get("caption", ""),
-        need_training=need_training,
-        verified=verified,
-        rejection_reasons=rejection_reasons,
-    )
+    db.update_image(image_id, **fields)
     tab = request.query.get("tab", "to_verify")
     batch = request.query.get("batch", 1)
     raise web.HTTPFound(f"/?tab={tab}&batch={batch}")
@@ -288,6 +288,7 @@ async def handle_upload(request):
         "verified": 0,
         "dataset": "custom",
         "rejection_reasons": [],
+        "added_by": session.get("username"),
     }
     db.add_image(**entry)
     raise web.HTTPFound(f"/?tab=to_verify&batch=1")
