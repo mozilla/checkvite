@@ -44,6 +44,8 @@ features = Features(
         "added_by": Value("string"),
         "verified_by": Value("string"),
         "modified_date": Value("timestamp[ns]"),
+        "nsfw": ClassLabel(names=["no", "yes"]),
+        "golden": ClassLabel(names=["no", "yes"]),
     }
 )
 

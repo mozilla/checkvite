@@ -237,3 +237,7 @@ a.button {
   padding: 10px;
   margin: 20px;
 }
+
+.blurred {
+  filter: blur(10px);
+}

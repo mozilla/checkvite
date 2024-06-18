@@ -195,6 +195,8 @@ async def get_random_images(request):
             "alt_text": entry["alt_text"],
             "image_url": f"/images/{entry['image_id']}.png",
             "inclusive_alt_text": entry["inclusive_alt_text"],
+            "nsfw": entry["nsfw"],
+            "golden": entry["golden"],
         }
 
     if username and username != "admin":
@@ -275,11 +277,18 @@ async def handle_upload(request):
     pil_image = PILImage.open(BytesIO(await image_data.read()))
     pil_image = pil_image.convert("RGB")
 
-    form_data = {}
-    field_names = ["alt_text", "license", "source"]
+    form_data = {"nsfw": 0, "golden": 0}
+
+    field_names = ["alt_text", "license", "source", "nsfw", "golden"]
     for name in field_names:
         field = await reader.next()
-        form_data[name] = await field.text()
+        if field is None:
+            continue
+
+        if field.name in ["nsfw", "golden"]:
+            form_data[name] = (await field.read()) == b"on" and 1 or 0
+        else:
+            form_data[name] = await field.text()
 
     entry = {
         "image": pil_image,
@@ -292,6 +301,8 @@ async def handle_upload(request):
         "dataset": "custom",
         "rejection_reasons": [],
         "added_by": session.get("username"),
+        "nsfw": form_data.get("nsfw", False),
+        "golden": form_data.get("golden", False),
     }
     db.add_image(**entry)
     raise web.HTTPFound(f"/?tab=to_verify&batch=1")

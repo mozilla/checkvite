@@ -599,6 +599,11 @@ export class ImageCaptionApp {
     img.className = "image";
     img.id = `actual_${imageData.image_id}`;
 
+    // Add blur effect if the image is NSFW
+    if (imageData.nsfw === 1) {
+      img.classList.add("blurred");
+    }
+
     // Add event listener for zoom functionality
     img.addEventListener("click", function() {
       const zoomedImage = document.createElement("div");

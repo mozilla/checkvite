@@ -45,6 +45,13 @@
     >
       <label for="image">Image:</label>
       <input type="file" id="image" name="image" required /><br /><br />
+      <img
+        id="imagePreview"
+        src=""
+        alt="Image Preview"
+        style="display: none; max-width: 100%; height: auto; margin-top: 10px"
+      /><br /><br />
+
       <label for="alt_text">Alt Text:</label>
       <input
         type="text"
@@ -69,7 +76,28 @@
         value="N/A"
         required
       /><br /><br />
+
+      <label for="nsfw">NSFW:</label>
+      <input type="checkbox" id="nsfw" name="nsfw" /><br /><br />
+
+      <label for="golden">Golden:</label>
+      <input type="checkbox" id="golden" name="golden" /><br /><br />
       <button type="submit">Upload</button>
     </form>
   </div>
 </div>
+
+<script>
+  document.getElementById("image").addEventListener("change", function (event) {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = document.getElementById("imagePreview");
+        img.src = e.target.result;
+        img.style.display = "block";
+      };
+      reader.readAsDataURL(file);
+    }
+  });
+</script>
