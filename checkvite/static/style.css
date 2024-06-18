@@ -241,3 +241,18 @@ a.button {
 .blurred {
   filter: blur(10px);
 }
+
+.nsfw-label {
+  top: 10px;
+  right: 10px;
+  background-color: red;
+  color: white;
+  padding: 2px 5px;
+  font-size: 12px;
+  font-weight: bold;
+  display: none; /* Hidden by default */
+}
+
+.image-block.nsfw .nsfw-label {
+  display: block; /* Display only if nsfw class is present */
+}

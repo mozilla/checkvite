@@ -599,9 +599,15 @@ export class ImageCaptionApp {
     img.className = "image";
     img.id = `actual_${imageData.image_id}`;
 
+    // Create the NSFW label
+    let nsfwLabel = document.createElement("div");
+    nsfwLabel.classList.add("nsfw-label");
+    nsfwLabel.innerText = "NSFW";
+
     // Add blur effect if the image is NSFW
     if (imageData.nsfw === 1) {
       img.classList.add("blurred");
+      imageBlock.classList.add("nsfw");
     }
 
     // Add event listener for zoom functionality
@@ -637,6 +643,7 @@ export class ImageCaptionApp {
 
     imageBlock.appendChild(captionDiv);
     imageBlock.insertBefore(img, imageBlock.firstChild);
+    imageBlock.insertBefore(nsfwLabel, imageBlock.firstChild);
 
     const form = document.createElement("form");
     form.id = `form${index}`;
