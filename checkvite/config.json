@@ -1,0 +1,5 @@
+{
+  "model_id": "mozilla/distilvit",
+  "model_revision": "main",
+  "baseline_model_id": "Xenova/vit-gpt2-image-captioning"
+}

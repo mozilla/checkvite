@@ -48,7 +48,7 @@ export class ImageCaptionApp {
     this.#user = null;
   }
 
-  async initPage(user) {
+  async initPage(user, model_id, model_revision, baseline_model_id) {
     if (user === "None") {
       user = null;
     }
@@ -70,11 +70,12 @@ export class ImageCaptionApp {
       this.blurTabContents("Loading models ~ takes a few mins on first load");
       this.#mozillaCaptioner = await pipeline(
         "image-to-text",
-        "mozilla/distilvit",
+        model_id,
+        model_revision,
       );
       this.#baseLineCaptioner = await pipeline(
         "image-to-text",
-        "Xenova/vit-gpt2-image-captioning",
+        baseline_model_id,
       );
       this.clearBlurOnTabContents();
     }

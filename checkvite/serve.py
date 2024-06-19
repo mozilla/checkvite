@@ -20,6 +20,7 @@ db = Database()
 routes = web.RouteTableDef()
 PRODUCTION = False
 USERS_FILE = os.path.join(HERE, "users.json")
+CONFIG = json.load(open(os.path.join(HERE, "config.json")))
 
 
 class UserNotFoundError(Exception):
@@ -225,13 +226,15 @@ async def index(request):
     tab = request.query.get("tab", "to_verify")
     batch = request.query.get("batch", 1)
 
-    return {
+    options = {
         "batch": int(batch),
         "message": session.pop("message", ""),
         "tab": tab,
         "production": PRODUCTION,
         "user": session.get("username", None),
     }
+    options.update(CONFIG)
+    return options
 
 
 @routes.post("/train")
