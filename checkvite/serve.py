@@ -104,13 +104,16 @@ async def auth_middleware(request, handler):
 async def stats_handler(request):
     session = await get_session(request)
     username = session.get("username", None)
+    if db.verified == 0 or db.need_training == 0:
+        acceptance_rate = 0
+    else:
+        acceptance_rate = db.verified / (db.verified + db.need_training) * 100
 
     response_data = {
         "need_training": db.need_training,
         "verified": db.verified,
         "to_verify": db.to_verify,
-        "acceptance_rate": "%.2f"
-        % (db.verified / (db.verified + db.need_training) * 100),
+        "acceptance_rate": "%.2f" % acceptance_rate,
         "u_need_training": 0,
         "u_verified": 0,
         "u_to_verify": 0,
