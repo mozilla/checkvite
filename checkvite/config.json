@@ -1,5 +1,5 @@
 {
-  "model_id": "tarekziade/vit-base-patch16-224-distilgpt2",
+  "model_id": "mozilla/distilvit",
   "model_revision": "main",
   "baseline_model_id": "Xenova/vit-gpt2-image-captioning"
 }
