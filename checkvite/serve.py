@@ -145,8 +145,23 @@ async def get_image(request):
     return web.Response(body=stream.getvalue(), content_type="image/png")
 
 
+@routes.get("/images/thumbnail/{image_id}.png")
+async def get_image_thumbnail(request):
+    image_id = int(request.match_info["image_id"])
+    entry = db[image_id]
+    image_path = entry["image"]
+    image = PILImage.open(image_path)
+    image.thumbnail((100, 100), resample=PILImage.LANCZOS)
+    stream = BytesIO()
+    image.save(stream, "PNG")
+    return web.Response(body=stream.getvalue(), content_type="image/png")
+
+
 @routes.get("/get_image")
 async def get_single_image(request):
+    session = await get_session(request)
+    username = session.get("username", None)
+
     tab = request.query.get("tab", "to_verify")
     if tab == "to_verify":
         verified = 0
@@ -154,19 +169,31 @@ async def get_single_image(request):
     elif tab == "verified":
         verified = 1
         need_training = 0
+    elif tab == "check":
+        verified = None
+        need_training = None
     else:
         verified = 0
         need_training = 1
 
     batch = int(request.query.get("batch", 1))
     index = int(request.query.get("index", 0))
-    index = (batch - 1) * 9 + index
+    batch_size = int(request.query.get("batch_size", 9))
+    index = (batch - 1) * batch_size + index
+
+    if username and username != "admin":
+        data_split = get_user(username).get_data_split(db.size)
+    elif username == "admin" and tab == "check" and user_id is not None:
+        data_split = get_user(user_id).get_data_split(db.size)
+    else:
+        data_split = None
 
     def _transform(entry):
         return {
             "image_id": entry["image_id"],
             "alt_text": entry["alt_text"],
             "image_url": f"/images/{entry['image_id']}.png",
+            "thumbnail_url": f"/images/thumbnail/{entry['image_id']}.png",
             "inclusive_alt_text": entry["inclusive_alt_text"],
         }
 
@@ -175,6 +202,8 @@ async def get_single_image(request):
         need_training=need_training,
         index=index,
         transform=_transform,
+        split=data_split,
+        username=username,
     )
 
     return web.json_response(image)
@@ -186,6 +215,7 @@ async def get_random_images(request):
     username = session.get("username", None)
 
     tab = request.query.get("tab", "to_verify")
+    user_id = request.query.get("user_id", None)
 
     if tab == "to_verify":
         verified = 0
@@ -193,25 +223,37 @@ async def get_random_images(request):
     elif tab == "verified":
         verified = 1
         need_training = 0
+    elif tab == "check":
+        verified = None
+        need_training = None
     else:
         verified = 0
         need_training = 1
 
     batch = int(request.query.get("batch", 1))
-    start = (batch - 1) * 9
+    batch_size = int(request.query.get("batch_size", 9))
+    start = (batch - 1) * batch_size
 
     def _transform(entry):
         return {
             "image_id": entry["image_id"],
             "alt_text": entry["alt_text"],
             "image_url": f"/images/{entry['image_id']}.png",
+            "thumbnail_url": f"/images/thumbnail/{entry['image_id']}.png",
             "inclusive_alt_text": entry["inclusive_alt_text"],
             "nsfw": entry["nsfw"],
             "golden": entry["golden"],
+            "verified": entry["verified"],
+            "need_training": entry["need_training"],
+            "rejection_reasons": entry["rejection_reasons"],
+            "verified_by": entry["verified_by"],
+            "added_by": entry["added_by"],
         }
 
     if username and username != "admin":
         data_split = get_user(username).get_data_split(db.size)
+    elif username == "admin" and tab == "check" and user_id is not None:
+        data_split = get_user(user_id).get_data_split(db.size)
     else:
         data_split = None
 
@@ -223,6 +265,7 @@ async def get_random_images(request):
             transform=_transform,
             split=data_split,
             username=username,
+            amount=batch_size,
         )
     )
 

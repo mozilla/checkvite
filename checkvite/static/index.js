@@ -16,6 +16,9 @@ export class ImageCaptionApp {
   #statsHTML;
   #helpHTML;
   #user;
+  #checkUser;
+  #batchSize;
+  #checkBatchSize;
 
   constructor() {
     this.#initializeEnvironment();
@@ -37,8 +40,9 @@ export class ImageCaptionApp {
     const url = new URL(window.location);
     const params = new URLSearchParams(url.search);
     this.#currentTab = params.get("tab") || "to_verify";
+    this.#batchSize = params.get("batch_size") || 9;
     this.#currentBatch = parseInt(params.get("batch") || 1);
-    this.#start = 1 + (this.#currentBatch - 1) * 9;
+    this.#start = 1 + (this.#currentBatch - 1) * this.#batchSize;
     this.#mozillaCaptioner = null;
     this.#baseLineCaptioner = null;
     this.#isBackwardListenerAttached = false;
@@ -46,6 +50,8 @@ export class ImageCaptionApp {
     this.#statsHTML = null;
     this.#helpHTML = null;
     this.#user = null;
+    this.#checkUser = params.get("user_id") || "user1";
+    this.#checkBatchSize = params.get("checkBatchSize") || "50";
   }
 
   async initPage(user, model_id, model_revision, baseline_model_id) {
@@ -56,6 +62,9 @@ export class ImageCaptionApp {
     this.#user = user;
 
     const tabs = ["to_verify", "verified", "to_train", "stats", "help"];
+    if (user === "admin") {
+      tabs.push("check");
+    }
     tabs.forEach((tab) => {
       document
         .getElementById(`tab_${tab}`)
@@ -426,6 +435,7 @@ export class ImageCaptionApp {
         tab.classList.remove("active");
       }
     });
+    console.log("Loading tab", tabName);
 
     if (tabName === "stats") {
       await this.injectStatsContent();
@@ -448,6 +458,9 @@ export class ImageCaptionApp {
       this.hideNavigationButtons();
     } else if (tabName === "help") {
       await this.injectHelp();
+      this.hideNavigationButtons();
+    } else if (tabName === "check") {
+      await this.injectCheck();
       this.hideNavigationButtons();
     } else {
       await this.fetchImages();
@@ -497,7 +510,7 @@ export class ImageCaptionApp {
   async fetchNewImage(batch, tab) {
     try {
       const response = await fetch(
-        `/get_image?batch=${batch}&index=9&tab=${tab}`,
+        `/get_image?batch=${batch}&index=8&tab=${tab}`,
       );
       if (response.ok) {
         const newImageData = await response.json();
@@ -760,5 +773,133 @@ export class ImageCaptionApp {
       this.#helpHTML = await this.loadContent("static/help.html");
     }
     container.innerHTML = this.#helpHTML;
+  }
+
+  async injectCheck() {
+    const container = document.getElementById("images");
+    try {
+      console.log(`Getting images for ${this.#checkUser}`);
+      const response = await fetch(
+        `/get_images?batch=${this.#currentBatch}&batch_size=${this.#checkBatchSize}&tab=check&user_id=${this.#checkUser}`,
+      );
+      const data = await response.json();
+
+      const div = document.createElement("div");
+      div.id = "images";
+
+      // create the form to change the user
+      const form = document.createElement("form");
+      const select = document.createElement("select");
+      select.name = "user_id";
+      ["user1", "user2", "user3", "user4", "user5"].forEach((user) => {
+        const option = document.createElement("option");
+        option.value = user;
+        option.textContent = user;
+        if (user === this.#checkUser) {
+          option.selected = true;
+        }
+        select.appendChild(option);
+      });
+
+      form.appendChild(select);
+      const input2 = document.createElement("input");
+      input2.type = "hidden";
+      input2.name = "tab";
+      input2.value = "check";
+      form.appendChild(input2);
+
+      const input3 = document.createElement("input");
+      input3.type = "hidden";
+      input3.name = "batch";
+      input3.value = "1";
+      form.appendChild(input3);
+
+      select.onchange = async () => {
+        const newUserId = select.value;
+        if (newUserId !== this.#checkUser) {
+          this.#checkUser = newUserId;
+          const newUrl = new URL(window.location.href);
+          newUrl.searchParams.set("user_id", newUserId);
+          window.history.pushState({}, "", newUrl);
+          await this.injectCheck();
+        }
+      };
+
+      div.appendChild(form);
+
+      // Create the table and its header
+      const table = document.createElement("table");
+      const header = table.createTHead();
+      const headerRow = header.insertRow();
+
+      const keys = [
+        "image_id",
+        "image_thumbnail_url",
+        "result",
+        "alt_text",
+        "inclusive_alt_text",
+        "rejection_reasons",
+      ];
+
+      const titles = {
+        image_id: "ID",
+        image_thumbnail_url: "Image",
+        alt_text: "Original",
+        inclusive_alt_text: "Corrected",
+        result: "Accuracy",
+        rejection_reasons: "Rejection reasons",
+        verified_by: "Verified by",
+      };
+
+      keys.forEach((key) => {
+        const th = document.createElement("th");
+        th.textContent = titles[key];
+        headerRow.appendChild(th);
+      });
+
+      // Create the table body
+      const tbody = table.createTBody();
+
+      data.forEach((image) => {
+        const row = tbody.insertRow();
+
+        keys.forEach((key) => {
+          const cell = row.insertCell();
+
+          if (key === "image_thumbnail_url") {
+            // If the data is the image URL, create an img element
+            const img = document.createElement("img");
+            img.src = `/images/thumbnail/${image.image_id}.png`;
+            img.alt = image.alt_text;
+            cell.appendChild(img);
+          } else if (key === "rejection_reasons") {
+            const ul = document.createElement("ul");
+            // Create li elements for each item
+            image[key].forEach((item) => {
+              const li = document.createElement("li");
+              li.textContent = item;
+              ul.appendChild(li);
+            });
+
+            cell.appendChild(ul);
+          } else if (key === "result") {
+            if (image["verified"] === 1) {
+              cell.textContent = "✅";
+            } else if (image["need_training"] === 1) {
+              cell.textContent = "❌";
+            } else {
+              cell.textContent = "❓";
+            }
+          } else {
+            cell.textContent = image[key];
+          }
+        });
+      });
+
+      div.appendChild(table);
+      container.replaceWith(div);
+    } catch (error) {
+      console.error("Error fetching and parsing data", error);
+    }
   }
 }
