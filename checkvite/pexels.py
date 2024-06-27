@@ -1,28 +1,50 @@
 import os
+from datetime import datetime
 import requests
 from datasets import (
     load_dataset,
     Dataset,
-    Features,
-    Value,
     Image as DImage,
     load_from_disk,
-    Sequence,
     concatenate_datasets,
 )
 from PIL import Image
 from io import BytesIO
+from torch.utils import data
 from tqdm import tqdm
 import pandas as pd
 
+from checkvite.db import features
+
 # Load the dataset from Hugging Face
 dataset = load_dataset("mozilla/alt-text-validation")
+
+
+# init all flags
+def update(example):
+    example["nsfw"] = example["image_id"] == 1012 and 1 or 0
+    example["golden"] = 0
+    example["verified"] = 0
+    example["need_training"] = 0
+    example["rejection_reasons"] = []
+    example["verified_by"] = ""
+    if example["inclusive_alt_text"] != "":
+        example["alt_text"] = example["inclusive_alt_text"]
+        example["inclusive_alt_text"] = ""
+    example["added_by"] = "admin"
+
+    return example
+
+
+# dataset = dataset.map(update)
+
 
 # Define the Pexels API key and endpoint
 PEXELS_API_KEY = os.environ["PEXELS_API_KEY"]
 PEXELS_API_URL = "https://api.pexels.com/v1/curated"
 
 per_page = 80  # Max per page limit for Pexels API
+start_page = 20
 
 
 def resize_image(img):
@@ -39,10 +61,10 @@ def resize_image(img):
     return img
 
 
-def fetch_images_from_pexels(api_key, per_page, total_images=500):
+def fetch_images_from_pexels(api_key, per_page, total_images=1000):
     headers = {"Authorization": api_key}
     images = []
-    page = 1
+    page = start_page
     while len(images) < total_images:
         response = requests.get(
             PEXELS_API_URL,
@@ -62,7 +84,8 @@ images = fetch_images_from_pexels(PEXELS_API_KEY, per_page)
 
 # Prepare data for new entries
 new_entries = []
-image_id_start = 500
+image_id_start = max([entry["image_id"] for entry in dataset["train"]]) + 1
+now = datetime.now().isoformat()
 
 
 for idx, image in enumerate(tqdm(images, desc="Processing images")):
@@ -85,35 +108,21 @@ for idx, image in enumerate(tqdm(images, desc="Processing images")):
         "need_training": 0,
         "verified": 0,
         "rejection_reasons": [],
+        "added_by": "admin",
+        "verified_by": "",
+        "modified_date": now,
+        "nsfw": 0,
+        "golden": 0,
     }
     new_entries.append(new_entry)
 
-# Create a new dataset with the new entries
-features = Features(
-    {
-        "dataset": Value("string"),
-        "image_id": Value("int64"),
-        "image": DImage(),
-        "alt_text": Value("string"),
-        "license": Value("string"),
-        "source": Value("string"),
-        "inclusive_alt_text": Value("string"),
-        "need_training": Value("int64"),
-        "verified": Value("int64"),
-        "rejection_reasons": Sequence(Value("string")),
-    }
-)
-
 
 new_entries_df = pd.DataFrame(new_entries)
-
 new_dataset = Dataset.from_pandas(new_entries_df, features=features)
-
-
 combined_dataset = concatenate_datasets([new_dataset, dataset["train"]])
 
 # Combine the new dataset with the existing dataset
-combined_dataset = combined_dataset.shuffle(seed=42)
+# combined_dataset = combined_dataset.shuffle(seed=42)
 
 # Save or upload the combined dataset as required
 combined_dataset.save_to_disk("combined_dataset")

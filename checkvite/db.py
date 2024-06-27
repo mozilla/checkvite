@@ -255,6 +255,10 @@ class Database:
         return len(self.data_dict)
 
     @property
+    def size(self):
+        return len(self.data_dict)
+
+    @property
     def verified(self):
         return sum(1 for item in self.data_dict.values() if item.get("verified") == 1)
 
@@ -278,8 +282,9 @@ class Database:
                     rejection_stats[reason] = 1
         return rejection_stats
 
-    def get_split_stats(self, split):
-        items = list(self.data_dict.values())[split[0] : split[1]]
+    def get_user_stats(self, split, username):
+        items = self._get_sorted(split, username)
+
         verified = sum(1 for item in items if item.get("verified") == 1)
         need_training = sum(1 for item in items if item.get("need_training") == 1)
         return {
@@ -287,6 +292,39 @@ class Database:
             "u_verified": verified,
             "u_to_verify": len(items) - (verified + need_training),
         }
+
+    def _get_sorted(self, split=None, username=None):
+        def sort_key(entry):
+            modified_date = entry.get("modified_date")
+
+            if modified_date is not None:
+                date = pd.Timestamp(modified_date).timestamp()
+            else:
+                date = pd.Timestamp(0).timestamp()
+
+            return (-date, -entry["image_id"])
+
+        all_entries = list(sorted(self.data_dict.values(), key=sort_key))
+
+        if split is not None:
+            user_entries = all_entries[split[0] : split[1]]
+        else:
+            user_entries = all_entries
+
+        current_ids = [v["image_id"] for v in user_entries]
+
+        # added images that were added by the user
+        if username is not None and username != "admin":
+            for entry in all_entries:
+                if (
+                    entry["image_id"] not in current_ids
+                    and entry["added_by"] == username
+                ):
+                    user_entries.append(entry)
+                    current_ids.append(entry["image_id"])
+
+        # sort again
+        return list(sorted(user_entries, key=sort_key))
 
     def __getitem__(self, key):
         return self.data_dict[key]
@@ -313,42 +351,12 @@ class Database:
         split=None,
         username=None,
     ):
-        def sort_key(entry):
-            modified_date = entry.get("modified_date")
-
-            if modified_date is not None:
-                date = pd.Timestamp(modified_date).timestamp()
-            else:
-                date = pd.Timestamp(0).timestamp()
-
-            return (-date, -entry["image_id"])
-
-        sorted_entries = list(sorted(self.data_dict.values(), key=sort_key))
-
-        if split is not None:
-            values = sorted_entries[split[0] : split[1]]
-        else:
-            values = sorted_entries
-
-        current_ids = [v["image_id"] for v in values]
-
-        # added images that were added by the user
-        if username is not None and username != "admin":
-            for entry in sorted_entries:
-                if (
-                    entry["image_id"] not in current_ids
-                    and entry["added_by"] == username
-                ):
-                    values.append(entry)
-                    current_ids.append(entry["image_id"])
-
-        # sort again
-        values = list(sorted(values, key=sort_key))
+        entries = self._get_sorted(split, username)
 
         # filter if needed
         filtered_entries = (
             entry
-            for entry in values
+            for entry in entries
             if entry["verified"] == verified and entry["need_training"] == need_training
         )
 

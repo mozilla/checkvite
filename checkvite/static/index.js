@@ -195,6 +195,8 @@ export class ImageCaptionApp {
         u_need_training,
         u_to_verify,
         rejection_reasons,
+        total,
+        total_user,
       } = data;
       // Handle the rejection stats
       const rejectionContainer = document.getElementById("rejectionStats");
@@ -231,8 +233,9 @@ export class ImageCaptionApp {
         wrapperDiv.appendChild(textDiv);
         rejectionContainer.appendChild(wrapperDiv);
       });
-      let total = verified + need_training + to_verify;
-      let u_total = u_verified + u_need_training + u_to_verify;
+
+      //let total = verified + need_training + to_verify;
+      //let u_total = u_verified + u_need_training + u_to_verify;
 
       document.getElementById("acceptanceRate").textContent =
         `${acceptance_rate}%`;
@@ -247,6 +250,10 @@ export class ImageCaptionApp {
           },
         ],
       };
+
+      document.getElementById("numberOfImages").textContent = `Total: ${total}`;
+      document.getElementById("numberOfUserImages").textContent =
+        `Total: ${total_user}`;
 
       // Create the overall progress pie chart
       const overallCtx = document
@@ -277,7 +284,7 @@ export class ImageCaptionApp {
         },
       });
 
-      if (u_total == 0) {
+      if (total_user == 0) {
         document.getElementById("user-progress").style.display = "none";
         return;
       }

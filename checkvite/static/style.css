@@ -230,6 +230,10 @@ a.button {
   width: 100%;
 }
 
+.chart-container p {
+  text-align: center;
+}
+
 #acceptanceRate {
   width: 100%;
   font-size: 300%;

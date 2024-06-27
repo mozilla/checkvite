@@ -2,15 +2,43 @@
   "admin": {
     "password": "c7ad44cbad762a5da0a452f9e854fdc1e0e7a52a38015f23f3eab1d80b931dd472634dfac71cd34ebc35d16ab7fb8a90c81f975113d6c7538dc69dd8de9077ec",
     "data_split": [
-      1,
-      1000
+      0,
+      1
     ]
   },
-  "tarek": {
-    "password": "c7ad44cbad762a5da0a452f9e854fdc1e0e7a52a38015f23f3eab1d80b931dd472634dfac71cd34ebc35d16ab7fb8a90c81f975113d6c7538dc69dd8de9077ec",
+  "user1": {
+    "password": "6529590d4063c5e621c7c9da0d3f32b1136a8ec2fff924d9ba829261989f3554e7fc7e635bf4978e2dbde169ee3ffe0ee301f0f1754b5fc19e161d13969fcb04",
     "data_split": [
-      670,
-      700
+      0,
+      0.2
+    ]
+  },
+  "user2": {
+    "password": "b59728bd1494e5721fd7f2825faa54affbace41dbd310e3cd9f630b8a5f1b13c24f7ad894b896d23c98394b3306482f0cfe71299a9fe87c6ec0d7f73a28fb7f2",
+    "data_split": [
+      1,
+      0.2
+    ]
+  },
+  "user3": {
+    "password": "b476e1ad25fbeef4c1ae523ca135792fdea5b76cc7f249441d270b9c1b49a220fa2a2325ceb105ece59e2adabee36862c577361e489256bad62db965c3f9abc0",
+    "data_split": [
+      2,
+      0.2
+    ]
+  },
+  "user4": {
+    "password": "d4a7f9413954851d3987feec0bac1f145e74ec58f09eb584b090e38e53ad7d780520add19887575e7ca154aedf1d720a8590f9388e064a6421e6a404b817e116",
+    "data_split": [
+      3,
+      0.2
+    ]
+  },
+  "user5": {
+    "password": "34221827aee49d9e680348c44cf6117b1e2b156a0b2ef05debc9cb34d26d52dc9878a7fe097aafe7c276b427a293222f36aca6b4cdb7bc6b3d1acffbd1b8b374",
+    "data_split": [
+      4,
+      0.5
     ]
   }
 }

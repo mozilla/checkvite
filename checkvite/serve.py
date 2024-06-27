@@ -42,13 +42,16 @@ class User:
     def __init__(self, username, data):
         self.username = username
         self.hash_password = data["password"]
-        self.data_split = data["data_split"]
+        self.user_index, self.user_split_size = data["data_split"]
 
     def check_password(self, password):
         return self.hash_password == hash_password(password)
 
-    def get_data_split(self):
-        return self.data_split
+    def get_data_split(self, size):
+        split_size = int(size * self.user_split_size)
+        start = self.user_index * split_size
+        end = start + split_size
+        return start, end
 
 
 users = load_users()
@@ -117,11 +120,15 @@ async def stats_handler(request):
         "u_need_training": 0,
         "u_verified": 0,
         "u_to_verify": 0,
+        "total": db.size,
+        "total_user": 0,
     }
 
     if username is not None:
         user = get_user(username)
-        response_data.update(db.get_split_stats(user.get_data_split()))
+        user_split = user.get_data_split(db.size)
+        response_data.update(db.get_user_stats(user_split, username))
+        response_data["total_user"] = user_split[1] - user_split[0]
 
     response_data["rejection_reasons"] = db.get_rejection_stats()
     return web.json_response(response_data)
@@ -204,7 +211,7 @@ async def get_random_images(request):
         }
 
     if username and username != "admin":
-        data_split = get_user(username).get_data_split()
+        data_split = get_user(username).get_data_split(db.size)
     else:
         data_split = None
 
@@ -235,6 +242,7 @@ async def index(request):
         "tab": tab,
         "production": PRODUCTION,
         "user": session.get("username", None),
+        "total": db.size,
     }
     options.update(CONFIG)
     return options
