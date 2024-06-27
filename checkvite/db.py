@@ -302,7 +302,8 @@ class Database:
             else:
                 date = pd.Timestamp(0).timestamp()
 
-            return (-date, -entry["image_id"])
+            # XXX we can sort by date because it break the users split order
+            return -entry["image_id"]
 
         all_entries = list(sorted(self.data_dict.values(), key=sort_key))
 
@@ -338,13 +339,25 @@ class Database:
         entry["image"] = self.data_dict.get_image(image_id)
         return entry
 
-    def get_image(self, verified=False, need_training=False, index=0, transform=None):
-        return list(self.get_images(verified, need_training, index, 1, transform))[0]
-
-    def get_images(
+    def get_image(
         self,
         verified=False,
         need_training=False,
+        index=0,
+        transform=None,
+        split=None,
+        username=None,
+    ):
+        return list(
+            self.get_images(
+                verified, need_training, index, 1, transform, split, username
+            )
+        )[0]
+
+    def get_images(
+        self,
+        verified=None,
+        need_training=None,
         start=0,
         amount=9,
         transform=None,
@@ -353,14 +366,15 @@ class Database:
     ):
         entries = self._get_sorted(split, username)
 
-        # filter if needed
-        filtered_entries = (
-            entry
-            for entry in entries
-            if entry["verified"] == verified and entry["need_training"] == need_training
-        )
+        if verified is not None:
+            entries = [entry for entry in entries if entry["verified"] == verified]
 
-        for entry in itertools.islice(filtered_entries, start, start + amount):
+        if need_training is not None:
+            entries = [
+                entry for entry in entries if entry["need_training"] == need_training
+            ]
+
+        for entry in itertools.islice(entries, start, start + amount):
             if transform is not None:
                 entry = transform(entry)
             yield entry
