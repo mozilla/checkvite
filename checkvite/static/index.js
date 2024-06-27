@@ -61,10 +61,14 @@ export class ImageCaptionApp {
     console.log("Initializing page for user", user);
     this.#user = user;
 
-    const tabs = ["to_verify", "verified", "to_train", "stats", "help"];
-    if (user === "admin") {
-      tabs.push("check");
-    }
+    const tabs = [
+      "to_verify",
+      "verified",
+      "to_train",
+      "stats",
+      "help",
+      "check",
+    ];
     tabs.forEach((tab) => {
       document
         .getElementById(`tab_${tab}`)
@@ -572,6 +576,12 @@ export class ImageCaptionApp {
       `/get_images?batch=${this.#currentBatch}&tab=${this.#currentTab}`,
     );
     const data = await response.json();
+    const oldContainer = document.getElementById("images");
+
+    if (data.length === 0) {
+      oldContainer.innerHTML = "Nothing to see here.";
+      return;
+    }
 
     const newContainer = document.createElement("div");
     newContainer.id = "images";
@@ -606,7 +616,6 @@ export class ImageCaptionApp {
       };
     });
 
-    const oldContainer = document.getElementById("images");
     oldContainer.replaceWith(newContainer);
   }
 
@@ -777,6 +786,10 @@ export class ImageCaptionApp {
 
   async injectCheck() {
     const container = document.getElementById("images");
+    if (!this.#user) {
+      container.innerHTML = "You need to be logged in to access this page";
+      return;
+    }
     try {
       console.log(`Getting images for ${this.#checkUser}`);
       const response = await fetch(
@@ -784,14 +797,44 @@ export class ImageCaptionApp {
       );
       const data = await response.json();
 
+      const image_ids = data.map((image) => image.image_id);
+      console.log("Getting feedback for images");
+      const feedbackResponse = await fetch(
+        "/feedback?image_ids=" + image_ids.join(","),
+      );
+
+      let feedbackData = await feedbackResponse.json();
+      feedbackData = feedbackData.feedback;
+
+      console.log(feedbackData);
+
+      data.forEach((image) => {
+        const feedback = feedbackData[image.image_id];
+        if (feedback) {
+          image.qa_feedback = feedback;
+        } else {
+          image.qa_feedback = "Click to edit";
+        }
+      });
+
       const div = document.createElement("div");
       div.id = "images";
 
       // create the form to change the user
       const form = document.createElement("form");
       const select = document.createElement("select");
+
+      let userSelection;
+
+      if (this.#user === "admin") {
+        userSelection = ["user1", "user2", "user3", "user4", "user5"];
+      } else {
+        userSelection = [this.#user];
+      }
+
       select.name = "user_id";
-      ["user1", "user2", "user3", "user4", "user5"].forEach((user) => {
+
+      userSelection.forEach((user) => {
         const option = document.createElement("option");
         option.value = user;
         option.textContent = user;
@@ -814,16 +857,18 @@ export class ImageCaptionApp {
       input3.value = "1";
       form.appendChild(input3);
 
-      select.onchange = async () => {
-        const newUserId = select.value;
-        if (newUserId !== this.#checkUser) {
-          this.#checkUser = newUserId;
-          const newUrl = new URL(window.location.href);
-          newUrl.searchParams.set("user_id", newUserId);
-          window.history.pushState({}, "", newUrl);
-          await this.injectCheck();
-        }
-      };
+      if (this.#user === "admin") {
+        select.onchange = async () => {
+          const newUserId = select.value;
+          if (newUserId !== this.#checkUser) {
+            this.#checkUser = newUserId;
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set("user_id", newUserId);
+            window.history.pushState({}, "", newUrl);
+            await this.injectCheck();
+          }
+        };
+      }
 
       div.appendChild(form);
 
@@ -839,6 +884,7 @@ export class ImageCaptionApp {
         "alt_text",
         "inclusive_alt_text",
         "rejection_reasons",
+        "qa_feedback",
       ];
 
       const titles = {
@@ -849,6 +895,7 @@ export class ImageCaptionApp {
         result: "Accuracy",
         rejection_reasons: "Rejection reasons",
         verified_by: "Verified by",
+        qa_feedback: "QA feedback",
       };
 
       keys.forEach((key) => {
@@ -889,6 +936,70 @@ export class ImageCaptionApp {
               cell.textContent = "❌";
             } else {
               cell.textContent = "❓";
+            }
+          } else if (key === "qa_feedback") {
+            cell.textContent = image["qa_feedback"];
+            if (cell.textContent === "Click to edit") {
+              cell.style.backgroundColor = "#f0f0f0"; // Light background color to indicate editability
+            } else {
+              cell.style.backgroundColor = "white";
+            }
+            cell.style.padding = "5px"; // Add padding to the cell
+            cell.title = "Click to edit"; // Tooltip text
+
+            if (this.#user != "admin" && cell.textContent === "Click to edit") {
+              cell.textContent = "";
+              cell.style.backgroundColor = "white";
+            }
+
+            if (this.#user === "admin") {
+              cell.contentEditable = true;
+              cell.style.cursor = "pointer"; // Change cursor to pointer
+              cell.addEventListener("keydown", async (event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  const newFeedback = cell.textContent;
+                  const payload = {
+                    image_id: image.image_id,
+                    qa_feedback: newFeedback,
+                  };
+                  try {
+                    const response = await fetch("/submit_feedback", {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify(payload),
+                    });
+                    if (response.ok) {
+                      console.log("Feedback submitted successfully");
+                      cell.blur(); // Remove focus from the cell after submitting
+                    } else {
+                      console.error("Error submitting feedback");
+                    }
+                  } catch (error) {
+                    console.error("Error submitting feedback", error);
+                  }
+                }
+              });
+
+              // Event listener for focus to clear the placeholder text and change background color
+              cell.addEventListener("focus", () => {
+                if (cell.textContent === "Click to edit") {
+                  cell.textContent = "";
+                }
+                cell.style.backgroundColor = "white"; // Change background color to white
+              });
+
+              // Event listener for blur to restore placeholder text and change background color if empty
+              cell.addEventListener("blur", () => {
+                if (cell.textContent.trim() === "") {
+                  cell.textContent = "Click to edit";
+                  cell.style.backgroundColor = "#f0f0f0"; // Light background color if empty
+                } else {
+                  cell.style.backgroundColor = "white"; // Keep background color white if not empty
+                }
+              });
             }
           } else {
             cell.textContent = image[key];

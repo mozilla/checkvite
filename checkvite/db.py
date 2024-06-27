@@ -99,7 +99,34 @@ class PersistentOrderedDict(OrderedDict):
             )
         """
         )
+        self.cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS feedback (
+                image_id TEXT PRIMARY KEY,
+                feedback TEXT
+            )
+        """
+        )
         self.conn.commit()
+
+    def set_feedback(self, image_id, feedback):
+        self.cursor.execute(
+            "REPLACE INTO feedback (image_id, feedback) VALUES (?, ?)",
+            (image_id, feedback),
+        )
+        self.conn.commit()
+
+    def get_feedback(self, image_ids):
+        placeholders = ",".join("?" for _ in image_ids)
+        self.cursor.execute(
+            f"SELECT image_id, feedback FROM feedback WHERE image_id IN ({placeholders})",
+            image_ids,
+        )
+        res = dict(
+            [(int(image_id), feedback) for image_id, feedback in self.cursor.fetchall()]
+        )
+
+        return res
 
     def _load_from_db(self):
         self.cursor.execute("SELECT key, value FROM data")
@@ -409,3 +436,9 @@ class Database:
                 #    await loop.run_in_executor(pool, self.save)
                 self.save()
                 self.dirty = False
+
+    def set_feedback(self, image_id, feedback):
+        self.data_dict.set_feedback(image_id, feedback)
+
+    def get_feedback(self, image_ids):
+        return self.data_dict.get_feedback(image_ids)

@@ -291,6 +291,36 @@ async def index(request):
     return options
 
 
+@routes.post("/submit_feedback")
+async def handle_feedback(request):
+    session = await get_session(request)
+    username = session.get("username")
+    if not username:
+        raise web.HTTPFound("/login")
+
+    data = await request.json()
+    db.set_feedback(data["image_id"], data["qa_feedback"])
+    return web.json_response({"status": "ok"})
+
+
+@routes.get("/feedback")
+async def get_feedback(request):
+    image_ids = request.query.get("image_ids", "").strip()
+    if image_ids == "":
+        return web.json_response(
+            {"status": "error", "message": "No image ids provided."}, status=400
+        )
+
+    image_ids = [
+        int(image_id.strip())
+        for image_id in image_ids.split(",")
+        if image_id.strip().isdigit()
+    ]
+
+    feedback = db.get_feedback(image_ids)
+    return web.json_response({"status": "ok", "feedback": feedback})
+
+
 @routes.post("/train")
 async def handle_train(request):
     session = await get_session(request)
