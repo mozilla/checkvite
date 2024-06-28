@@ -11,8 +11,6 @@ export class ImageCaptionApp {
   #start;
   #mozillaCaptioner;
   #baseLineCaptioner;
-  #isBackwardListenerAttached;
-  #isForwardListenerAttached;
   #statsHTML;
   #helpHTML;
   #user;
@@ -45,8 +43,6 @@ export class ImageCaptionApp {
     this.#start = 1 + (this.#currentBatch - 1) * this.#batchSize;
     this.#mozillaCaptioner = null;
     this.#baseLineCaptioner = null;
-    this.#isBackwardListenerAttached = false;
-    this.#isForwardListenerAttached = false;
     this.#statsHTML = null;
     this.#helpHTML = null;
     this.#user = null;
@@ -360,18 +356,8 @@ export class ImageCaptionApp {
   hideNavigationButtons() {
     const backwardButton = document.getElementById("backward");
     const forwardButton = document.getElementById("forward");
-
     backwardButton.style.display = "none";
     forwardButton.style.display = "none";
-
-    if (this.#isBackwardListenerAttached) {
-      backwardButton.removeEventListener("click", this.backwardClickHandler);
-      this.#isBackwardListenerAttached = false;
-    }
-    if (this.#isForwardListenerAttached) {
-      forwardButton.removeEventListener("click", this.forwardClickHandler);
-      this.#isForwardListenerAttached = false;
-    }
   }
 
   async backwardClickHandler() {
@@ -389,27 +375,13 @@ export class ImageCaptionApp {
     backwardButton.style.display = "inline-block";
     forwardButton.style.display = "inline-block";
 
-    if (
-      backwardButton.style.display !== "none" &&
-      !this.#isBackwardListenerAttached
-    ) {
-      backwardButton.addEventListener(
-        "click",
-        this.backwardClickHandler.bind(this),
-      );
-      this.#isBackwardListenerAttached = true;
-    }
+    const newBackward = backwardButton.cloneNode(true);
+    newBackward.addEventListener("click", this.backwardClickHandler.bind(this));
+    backwardButton.parentNode.replaceChild(newBackward, backwardButton);
 
-    if (
-      forwardButton.style.display !== "none" &&
-      !this.#isForwardListenerAttached
-    ) {
-      forwardButton.addEventListener(
-        "click",
-        this.forwardClickHandler.bind(this),
-      );
-      this.#isForwardListenerAttached = true;
-    }
+    const newForward = forwardButton.cloneNode(true);
+    newForward.addEventListener("click", this.forwardClickHandler.bind(this));
+    forwardButton.parentNode.replaceChild(newForward, forwardButton);
   }
 
   updateURL() {
@@ -423,10 +395,10 @@ export class ImageCaptionApp {
 
   async openTab(_evt, tabName, batch = 1) {
     if (this.#currentTab === tabName && this.#currentBatch === batch) return;
-
     this.#currentBatch = batch;
     this.#currentTab = tabName;
-    this.#start = 1 + (this.#currentBatch - 1) * 9;
+    this.#start = 1 + (this.#currentBatch - 1) * this.#batchSize;
+
     this.updateURL();
     await this.loadTab(tabName);
   }
@@ -439,7 +411,6 @@ export class ImageCaptionApp {
         tab.classList.remove("active");
       }
     });
-    console.log("Loading tab", tabName);
 
     if (tabName === "stats") {
       await this.injectStatsContent();
@@ -791,22 +762,18 @@ export class ImageCaptionApp {
       return;
     }
     try {
-      console.log(`Getting images for ${this.#checkUser}`);
       const response = await fetch(
         `/get_images?batch=${this.#currentBatch}&batch_size=${this.#checkBatchSize}&tab=check&user_id=${this.#checkUser}`,
       );
       const data = await response.json();
 
       const image_ids = data.map((image) => image.image_id);
-      console.log("Getting feedback for images");
       const feedbackResponse = await fetch(
         "/feedback?image_ids=" + image_ids.join(","),
       );
 
       let feedbackData = await feedbackResponse.json();
       feedbackData = feedbackData.feedback;
-
-      console.log(feedbackData);
 
       data.forEach((image) => {
         const feedback = feedbackData[image.image_id];
@@ -918,6 +885,24 @@ export class ImageCaptionApp {
             const img = document.createElement("img");
             img.src = `/images/thumbnail/${image.image_id}.png`;
             img.alt = image.alt_text;
+            img.className = "image";
+
+            img.addEventListener("click", function() {
+              const zoomedImage = document.createElement("div");
+              zoomedImage.className = "zoomed-image";
+              const zoomedImg = document.createElement("img");
+              zoomedImg.src = `/images/${image.image_id}.png`;
+              zoomedImg.className = "zoomed-img";
+              zoomedImage.appendChild(zoomedImg);
+
+              // Add click event to remove the zoomed image
+              zoomedImage.addEventListener("click", function() {
+                document.body.removeChild(zoomedImage);
+              });
+
+              document.body.appendChild(zoomedImage);
+            });
+
             cell.appendChild(img);
           } else if (key === "rejection_reasons") {
             const ul = document.createElement("ul");
@@ -972,7 +957,6 @@ export class ImageCaptionApp {
                       body: JSON.stringify(payload),
                     });
                     if (response.ok) {
-                      console.log("Feedback submitted successfully");
                       cell.blur(); // Remove focus from the cell after submitting
                     } else {
                       console.error("Error submitting feedback");
