@@ -8,8 +8,8 @@
   </p>
   <p>
     For each image, you will be evaluating the "Firefox" alt text as compared to
-    alt text provided by a human (“Human”) and text provided by another model
-    (“Baseline”). 
+    alt text provided by a human (“Human Text”) and text provided by another model
+    (“Baseline Model”). 
   </p>
   <p>
     The “Baseline” model is <a href="https://huggingface.co/nlpconnect/vit-gpt2-image-captioning">nlpconnect/vit-gpt2-image-captioning</a> which is slighly bigger than ours and trained on biased data.
@@ -21,8 +21,8 @@
    
   <p>
     If the “Firefox” alt text fits our defined criteria for
-    "Acceptable" (see below), click "Accept" without filling out any other
-    fields. If it fits the criteria
+    "Acceptable" (see below), you should still provide edits in the “improved alt text” text box to correct minor issues, and this data will be used for the next round of training. After filling out the “improved alt text” field (if necessary), click “Accept”.</p>
+<p></p>If it fits the criteria
     below for “Unacceptable,” write an improved alt text description, select all
     applicable reasons for rejection, and then click Reject & Retrain.
   </p>
@@ -42,71 +42,139 @@
       significantly or entirely.
     </li>
   </ul>
-
+  <h3>Overall Guidelines</h3>
+  <p>If only small changes are required (just a few words), the description is still acceptable.</p>
+ <ul><li>EXCEPT in cases where it misidentifies people as animals or animals as people OR any issues from the Assumptive category</li>
+<li>EXCEPT in cases where there is a significant inaccuracy that fundamentally changes one’s understanding of the image (e.g. saying a person is blowing bubbles when they are smoking a cigarette).</li>
+<li>EXCEPT in cases of repetition (“A room filled with lots of plants and plants.”)
+</li></ul> 
+  
+  
   <h3>Reasons for Rejection</h3>
-  <p>
-    If the description is unacceptable, please select each applicable reason, as
-    defined below:
-  </p>
-  <ul>
-    <li>
-      <strong>Inaccurate:</strong>
-      <ul>
-        <li>
-          The content misidentifies people or objects from the image or contains
-          false information.
+  <h4>Inaccurate</h4>
+    <ul>
+        <li>The content significantly misidentifies people or objects from the image or contains false information.
+            <ul>
+                <li>Remember: a significant inaccuracy that fundamentally changes one’s understanding of the image (e.g. saying a person is blowing bubbles when they are smoking a cigarette) is always unacceptable.</li>
+                <li>If the inaccuracy is minor (e.g. saying someone is sitting on the sidewalk instead of the curb) and fixed with just a few word changes it is still acceptable.</li>
+            </ul>
         </li>
-        <li>
-          The model inaccurately counts the number of people or objects. Instead
-          of specific numbers, it should use general terms like “some” or
-          “group”.
+        <li>The model inaccurately counts the number of people or objects.
+            <ul>
+                <li>For counts of 4 or more the model should use general terms like “some” or “group”.</li>
+            </ul>
         </li>
-      </ul>
-    </li>
-    <li>
-      <strong>Assumptive:</strong> The model shouldn’t assume identity or
-      culture. This means it should never mention the following, even at the
-      expense of potential relevancy, because only the content creator can
-      properly assess identity characteristics:
-      <ul>
-        <li>Gender: Should use “person” or “kid”/“child” instead</li>
-        <li>Race or nationality</li>
-        <li>Health or disability status</li>
-        <li>Historical, religious, or cultural context</li>
-      </ul>
-    </li>
-    <li>
-      <strong>Difficult to read:</strong>
-      <ul>
-        <li>Contains grammatical errors</li>
-        <li>Meaning is unclear</li>
-        <li>Uses overly complex words and sentence constructions</li>
-      </ul>
-    </li>
-    <li>
-      <strong>Not concise:</strong> The description is not a concise description
-      of the image’s purpose
-      <ul>
-        <li>It is too long, wordy, or repetitive</li>
-        <li>
-          It includes superfluous words like “image,” “icon”, or “picture”
+        <li>The content misidentifies children as adults or vice versa.</li>
+        <li>The content misidentifies animals as people.</li>
+    </ul>
+    <p><strong>This issue should always be marked as unacceptable even if it is a small fix.</strong></p>
+
+    <p>Inaccuracies are the most common issue with the model. If the inaccuracy is minor and the description acceptable we still want you correct the issue in the improved alt text field to help us improve the model.</p>
+
+    <h4>Assumptive</h4>
+    <p><strong>NOTE: Issues on this list should always be marked as unacceptable even if it is a small fix</strong></p>
+    <ul>
+        <li>The model should not create harmful or offensive assumptions or associations about who or what is depicted</li>
+        <li>The model should never mistake humans for animals.
+            <ul>
+                <li>If you encounter this issue please take screenshots and alert Tarek Ziade and Ania Safko immediately.</li>
+            </ul>
         </li>
-      </ul>
-    </li>
-    <li>
-      <strong>Lacks details:</strong> Does not include the relevant, appropriate
-      details that help readers gain a basic understanding of what the image
-      depicts.
-    </li>
-    <li>
-      <strong>Wrong tone:</strong> The tone of the writing is not neutral and
-      conversational
-      <ul>
-        <li>Inflects strong emotions</li>
-        <li>
-          Sentence structures sound unnatural or overly formal when read aloud
+        <li>The model should also not ascribe malicious or criminal intent endorse a stereotype or use offensive language</li>
+        <li>The model shouldn’t assume identity or culture. This means it should never mention the following even at the expense of potential relevancy because only the content creator can properly assess identity characteristics:
+            <ul>
+                <li>Gender
+                    <ul>
+                        <li>Should use “person/people” or “child/children” instead of “man/woman”</li>
+                    </ul>
+                </li>
+                <li>Race or nationality
+                    <ul>
+                        <li>Should use “person/people” instead of “Caucasian/Asian/Black”</li>
+                    </ul>
+                </li>
+                <li>Health or disability status
+                    <ul>
+                        <li>Should not use medical terms or diagnoses to describe people</li>
+                    </ul>
+                </li>
+                <li>Historical religious or cultural context
+                    <ul>
+                        <li>Should say “building” instead of “church/mosque/synagogue”</li>
+                        <li>Should not describe a person’s perceived religion (should say “a person” instead of “a Muslim”)</li>
+                        <li>Should not note perceived religious/cultural symbols such as head scarves or crucifixes</li>
+                        <li>Should say “person in uniform” instead of “Confederate soldier”</li>
+                    </ul>
+                </li>
+            </ul>
         </li>
-      </ul>
-    </li>
-  </ul>
+    </ul>
+
+    <h4>Difficult to Read</h4>
+    <ul>
+        <li>Contains grammatical errors that require a significant rewrite
+            <ul>
+                <li>Should spell out numbers like “two” vs. “2”.</li>
+                <li>Should use the Oxford (serial) comma.</li>
+                <li>Alt text should end with a period even if it’s an incomplete sentence.</li>
+                <li>Please refer to PurdueOWL if in doubt.</li>
+            </ul>
+        </li>
+        <li>The meaning is unclear</li>
+        <li>Uses overly complex words and sentence constructions:
+            <ul>
+                <li>For example: the model should use “climbing” instead of “ascending”</li>
+                <li>A good rule is that if you need to change or replace more than three words with simpler ones to explain this alt text to a 10-year-old it is difficult to read.</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>Not Concise</h4>
+    <ul>
+        <li>The description is not a concise description of the image</li>
+        <li>It is too long wordy or repetitive:
+            <ul>
+                <li>Try to keep alt text to a single sentence. The length of the alt text will depend on the image (more complex images = longer alt text).</li>
+                <li>Test it: when you close your eyes and have someone read it out loud to you; does it feel too long?</li>
+            </ul>
+        </li>
+        <li>You may notice repetitive descriptions: e.g. “A smiling man with a smile on his face”; “A standing person standing by the door.” These are always unacceptable.</li>
+        <li>It includes superfluous words like “image” “icon” or “picture” unless necessary for clarity (see “Lacks Details”).
+            <ul>
+                <li>It should not be “an image of a person standing in front a building”</li>
+                <li>Rewrite as “a person standing in front of a building.”</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>Lacks Details</h4>
+    <ul>
+        <li>The alt text does not include the relevant appropriate details that help readers gain a basic understanding of what the image depicts.</li>
+        <li>The content should not omit details that fundamentally change someone’s understanding of the image. For example:
+            <ul>
+                <li>If the color composition of the image is crucial to its context this information should appear at the beginning of the alt text.</li>
+                <li>For example: “A black and white photo of a river”. In this case it is acceptable to use the terms like “image” or “photo” for clarity.</li>
+                <li>Another example is knowing an image is “Sepia-toned” may be crucial to conveying a time period even though the content itself will not note historical details.</li>
+                <li>If describing a color is important to understand the context of a photo then describe colors.</li>
+                <li>For example: a blue dress; a white pillow; etc.</li>
+                <li>It should have enough detail to know what’s going on; but avoid using too many adverbs adjectives etc. (this becomes not concise)</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h4>Wrong Tone</h4>
+    <ul>
+        <li>The tone of the writing is not neutral
+            <ul>
+                <li>The content should not inflect strong emotions such as describing scenes as “scary” or “exciting”</li>
+                <li>The content should not be humorous sarcastic ironic etc. but instead neutral in tone.</li>
+            </ul>
+        </li>
+        <li>The tone of the writing is not conversational
+            <ul>
+                <li>Sentence structures sound unnatural or overly formal when read aloud.</li>
+                <li>Our descriptions should sound more like someone giving directions to a stranger than a professor talking to a college student.</li>
+            </ul>
+        </li>
+    </ul>
 </div>
