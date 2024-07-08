@@ -279,6 +279,9 @@ async def index(request):
     tab = request.query.get("tab", "to_verify")
     batch = request.query.get("batch", 1)
 
+    annotators = list(users.keys())
+    annotators.remove("admin")
+
     options = {
         "batch": int(batch),
         "message": session.pop("message", ""),
@@ -286,6 +289,7 @@ async def index(request):
         "production": PRODUCTION,
         "user": session.get("username", None),
         "total": db.size,
+        "user_list": annotators,
     }
     options.update(CONFIG)
     return options

@@ -7,7 +7,7 @@
   window.PRODUCTION = {{ production }};
 
   const app = new ImageCaptionApp();
-  await app.initPage('{{ user }}', '{{ model_id }}', '{{ model_revision }}', '{{ baseline_model_id }}');
+  await app.initPage('{{ user }}', '{{ model_id }}', '{{ model_revision }}', '{{ baseline_model_id }}', {{ user_list | safe }});
 
 </script>
 

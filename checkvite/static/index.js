@@ -17,6 +17,7 @@ export class ImageCaptionApp {
   #checkUser;
   #batchSize;
   #checkBatchSize;
+  #userList;
 
   constructor() {
     this.#initializeEnvironment();
@@ -50,13 +51,13 @@ export class ImageCaptionApp {
     this.#checkBatchSize = params.get("checkBatchSize") || "50";
   }
 
-  async initPage(user, model_id, model_revision, baseline_model_id) {
+  async initPage(user, model_id, model_revision, baseline_model_id, user_list) {
     if (user === "None") {
       user = null;
     }
     console.log("Initializing page for user", user);
     this.#user = user;
-
+    this.#userList = user_list;
     const tabs = [
       "to_verify",
       "verified",
@@ -457,8 +458,13 @@ export class ImageCaptionApp {
       body: formData,
     });
     if (response.ok) {
-      form.closest(".col-4").remove();
-      this.reorganizeGrid(this.#currentBatch);
+      if (this.#currentTab == "to_verify") {
+        form.closest(".col-4").remove();
+        this.reorganizeGrid(this.#currentBatch);
+      } else {
+        // In-place editing
+        await this.loadTab(this.#currentTab);
+      }
     } else {
       alert("Form submission failed.");
     }
@@ -478,8 +484,9 @@ export class ImageCaptionApp {
       }
       row.appendChild(block);
     });
-
-    this.fetchNewImage(batch, this.#currentTab);
+    if (this.#currentTab == "to_verify") {
+      this.fetchNewImage(batch, this.#currentTab);
+    }
   }
 
   async fetchNewImage(batch, tab) {
@@ -634,7 +641,7 @@ export class ImageCaptionApp {
     const humanCaption = this.taggedText("Human text", imageData.alt_text);
     captionDiv.appendChild(humanCaption);
 
-    if (tab === "to_train") {
+    if (imageData.inclusive_alt_text !== "") {
       const trainCaption = this.taggedText(
         "Text for training",
         imageData.inclusive_alt_text,
@@ -659,7 +666,7 @@ export class ImageCaptionApp {
     hiddenInput.value = imageData.image_id;
     form.appendChild(hiddenInput);
 
-    if (tab !== "to_train" && this.#user) {
+    if (this.#user) {
       const feedbackHeader = document.createElement("h4");
       feedbackHeader.textContent = "Feedback";
       form.appendChild(feedbackHeader);
@@ -668,11 +675,14 @@ export class ImageCaptionApp {
       captionLabel.htmlFor = `caption${index}`;
       captionLabel.textContent = "Improved alt text";
       form.appendChild(captionLabel);
-
       const captionInput = document.createElement("input");
       captionInput.type = "text";
       captionInput.name = "caption";
       captionInput.id = `caption${index}`;
+      if (imageData.inclusive_alt_text !== "") {
+        captionInput.value = imageData.inclusive_alt_text;
+      }
+
       form.appendChild(captionInput);
 
       const fieldset = document.createElement("fieldset");
@@ -694,6 +704,9 @@ export class ImageCaptionApp {
         checkbox.type = "checkbox";
         checkbox.name = "rejection_reason";
         checkbox.value = reason;
+        if (imageData.rejection_reasons.includes(reason)) {
+          checkbox.checked = true;
+        }
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(reason.replace(/_/g, " ")));
         fieldset.appendChild(label);
@@ -706,25 +719,21 @@ export class ImageCaptionApp {
     const footer = document.createElement("footer");
     footer.className = "is-right";
 
-    if (tab !== "verified" && this.#user) {
+    if (this.#user) {
       const acceptButton = document.createElement("button");
       acceptButton.name = "discard";
       acceptButton.type = "submit";
       acceptButton.id = `success_${index}`;
       acceptButton.className = "button success";
-      acceptButton.textContent =
-        tab === "to_train" ? "I changed my mind!" : "Accept";
+      acceptButton.textContent = "Accept";
       footer.appendChild(acceptButton);
-    }
 
-    if (tab !== "to_train" && this.#user) {
       const rejectButton = document.createElement("button");
       rejectButton.name = "train";
       rejectButton.type = "submit";
       rejectButton.id = `fail_${index}`;
       rejectButton.className = "button error";
-      rejectButton.textContent =
-        tab === "verified" ? "I changed my mind!" : "Reject & Retrain";
+      rejectButton.textContent = "Reject & Retrain";
       footer.appendChild(rejectButton);
     }
 
@@ -794,7 +803,7 @@ export class ImageCaptionApp {
       let userSelection;
 
       if (this.#user === "admin") {
-        userSelection = ["user1", "user2", "user3", "user4", "user5"];
+        userSelection = this.#userList;
       } else {
         userSelection = [this.#user];
       }
@@ -894,8 +903,6 @@ export class ImageCaptionApp {
               zoomedImg.src = `/images/${image.image_id}.png`;
               zoomedImg.className = "zoomed-img";
               zoomedImage.appendChild(zoomedImg);
-
-              // Add click event to remove the zoomed image
               zoomedImage.addEventListener("click", function() {
                 document.body.removeChild(zoomedImage);
               });
@@ -925,12 +932,12 @@ export class ImageCaptionApp {
           } else if (key === "qa_feedback") {
             cell.textContent = image["qa_feedback"];
             if (cell.textContent === "Click to edit") {
-              cell.style.backgroundColor = "#f0f0f0"; // Light background color to indicate editability
+              cell.style.backgroundColor = "#f0f0f0";
             } else {
               cell.style.backgroundColor = "white";
             }
-            cell.style.padding = "5px"; // Add padding to the cell
-            cell.title = "Click to edit"; // Tooltip text
+            cell.style.padding = "5px";
+            cell.title = "Click to edit";
 
             if (this.#user != "admin" && cell.textContent === "Click to edit") {
               cell.textContent = "";
@@ -957,7 +964,7 @@ export class ImageCaptionApp {
                       body: JSON.stringify(payload),
                     });
                     if (response.ok) {
-                      cell.blur(); // Remove focus from the cell after submitting
+                      cell.blur();
                     } else {
                       console.error("Error submitting feedback");
                     }
