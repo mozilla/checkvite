@@ -135,22 +135,32 @@ export class ImageCaptionApp {
     });
   }
 
-  async fetchCaption(captioner, image_id) {
+  async fetchCaption({
+    captioner,
+    image_id,
+    image_selector = `actual_${image_id}`,
+    image_url,
+  }) {
     let pipeline;
+    let res;
     if (captioner === "Firefox") {
       pipeline = this.#mozillaCaptioner;
     } else {
       pipeline = this.#baseLineCaptioner;
     }
-    const img = document.getElementById(`actual_${image_id}`);
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    context.drawImage(img, 0, 0, img.width, img.height);
-    const blob = await this.getCanvasBlob(canvas);
-    const blobUrl = URL.createObjectURL(blob);
-    let res = await pipeline(blobUrl);
+    if (!image_url) {
+      const img = document.getElementById(image_selector);
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      context.drawImage(img, 0, 0, img.width, img.height);
+      const blob = await this.getCanvasBlob(canvas);
+      const blobUrl = URL.createObjectURL(blob);
+      res = await pipeline(blobUrl);
+    } else {
+      res = await pipeline(image_url);
+    }
     res = res[0].generated_text;
     if (res === "T") {
       res = "Text document.";
@@ -164,7 +174,14 @@ export class ImageCaptionApp {
     return captionDiv;
   }
 
-  displayCaption(captioner, image_id, class_prefix = "") {
+  displayCaption({
+    captioner,
+    image_id,
+    class_prefix = "",
+    create_header = true,
+    image_selector = `actual_${image_id}`,
+    image_url,
+  }) {
     const div = document.createElement("div");
     div.id = `${class_prefix}caption${captioner}${image_id}`;
     const button = document.createElement("button");
@@ -175,7 +192,12 @@ export class ImageCaptionApp {
     button.addEventListener("click", (event) => {
       event.target.innerHTML = '<div class="loader-small"></div>';
 
-      this.fetchCaption(captioner, image_id).then((caption) => {
+      this.fetchCaption({
+        captioner,
+        image_id,
+        image_selector,
+        image_url,
+      }).then((caption) => {
         const captionDiv = document.getElementById(
           `${class_prefix}caption${captioner}${image_id}`,
         );
@@ -186,9 +208,11 @@ export class ImageCaptionApp {
       });
     });
 
-    div.innerHTML = `<span class='tag'>${captioner}</span>`;
-    div.appendChild(button);
+    if (create_header) {
+      div.innerHTML = `<span class='tag'>${captioner}</span>`;
+    }
 
+    div.appendChild(button);
     return div;
   }
 
@@ -539,10 +563,16 @@ export class ImageCaptionApp {
     );
     if (captionContainer) {
       captionContainer.prepend(
-        this.displayCaption("Baseline model", imageData.image_id),
+        this.displayCaption({
+          captioner: "Baseline model",
+          image_id: imageData.image_id,
+        }),
       );
       captionContainer.prepend(
-        this.displayCaption("Firefox", imageData.image_id),
+        this.displayCaption({
+          captioner: "Firefox",
+          image_id: imageData.image_id,
+        }),
       );
     } else {
       console.error(`Caption container not found for image${table_idx}`);
@@ -857,7 +887,7 @@ export class ImageCaptionApp {
         "image_id",
         "image_thumbnail_url",
         "result",
-        "alt_text",
+        "firefox_alt_text",
         "inclusive_alt_text",
         "rejection_reasons",
         "qa_feedback",
@@ -866,7 +896,7 @@ export class ImageCaptionApp {
       const titles = {
         image_id: "ID",
         image_thumbnail_url: "Image",
-        alt_text: "Original",
+        firefox_alt_text: "Firefox",
         inclusive_alt_text: "Corrected",
         result: "Accuracy",
         rejection_reasons: "Rejection reasons",
@@ -895,7 +925,7 @@ export class ImageCaptionApp {
             img.src = `/images/thumbnail/${image.image_id}.png`;
             img.alt = image.alt_text;
             img.className = "image";
-
+            img.id = `thumbnail_${image.image_id}`;
             img.addEventListener("click", function() {
               const zoomedImage = document.createElement("div");
               zoomedImage.className = "zoomed-image";
@@ -992,6 +1022,16 @@ export class ImageCaptionApp {
                 }
               });
             }
+          } else if (key === "firefox_alt_text") {
+            cell.appendChild(
+              this.displayCaption({
+                captioner: "Firefox",
+                image_id: image.image_id,
+                create_header: false,
+                //image_selector: `thumbnail_${image.image_id}`,
+                image_url: `/images/${image.image_id}.png`,
+              }),
+            );
           } else {
             cell.textContent = image[key];
           }
