@@ -5,6 +5,27 @@ import {
 
 import "https://cdn.jsdelivr.net/npm/chart.js";
 
+async function fetchURL(url, options = {}, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response;
+    } catch (error) {
+      if (attempt < retries) {
+        console.log(`Attempt ${attempt + 1} failed on ${url}. Retrying...`);
+      } else {
+        console.error(
+          `Attempt ${attempt + 1} failed on ${url}. No more retries left.`,
+        );
+        throw error; // Re-throw the error after all retries have been exhausted
+      }
+    }
+  }
+}
+
 export class ImageCaptionApp {
   #currentTab;
   #currentBatch;
@@ -218,7 +239,7 @@ export class ImageCaptionApp {
 
   async updateProgressBar() {
     try {
-      const response = await fetch("/stats");
+      const response = await fetchURL("/stats");
       const data = await response.json();
       const {
         verified,
@@ -477,7 +498,7 @@ export class ImageCaptionApp {
       formData.append("action", submitButton.name);
     }
 
-    const response = await fetch("/train", {
+    const response = await fetchURL("/train", {
       method: "POST",
       body: formData,
     });
@@ -515,7 +536,7 @@ export class ImageCaptionApp {
 
   async fetchNewImage(batch, tab) {
     try {
-      const response = await fetch(
+      const response = await fetchURL(
         `/get_image?batch=${batch}&index=8&tab=${tab}`,
       );
       if (response.ok) {
@@ -580,7 +601,7 @@ export class ImageCaptionApp {
   }
 
   async fetchImages() {
-    const response = await fetch(
+    const response = await fetchURL(
       `/get_images?batch=${this.#currentBatch}&tab=${this.#currentTab}`,
     );
     const data = await response.json();
@@ -774,7 +795,7 @@ export class ImageCaptionApp {
   }
 
   async loadContent(url) {
-    const response = await fetch(url);
+    const response = await fetchURL(url);
     return response.text();
   }
 
@@ -801,13 +822,13 @@ export class ImageCaptionApp {
       return;
     }
     try {
-      const response = await fetch(
+      const response = await fetchURL(
         `/get_images?batch=${this.#currentBatch}&batch_size=${this.#checkBatchSize}&tab=check&user_id=${this.#checkUser}`,
       );
       const data = await response.json();
 
       const image_ids = data.map((image) => image.image_id);
-      const feedbackResponse = await fetch(
+      const feedbackResponse = await fetchURL(
         "/feedback?image_ids=" + image_ids.join(","),
       );
 
@@ -986,7 +1007,7 @@ export class ImageCaptionApp {
                     qa_feedback: newFeedback,
                   };
                   try {
-                    const response = await fetch("/submit_feedback", {
+                    const response = await fetchURL("/submit_feedback", {
                       method: "POST",
                       headers: {
                         "Content-Type": "application/json",
