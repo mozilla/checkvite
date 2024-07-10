@@ -482,7 +482,7 @@ export class ImageCaptionApp {
       this.hideNavigationButtons();
     } else if (tabName === "check") {
       await this.injectCheck();
-      this.hideNavigationButtons();
+      this.showNavigationButtons();
     } else {
       await this.fetchImages();
       this.showNavigationButtons();
