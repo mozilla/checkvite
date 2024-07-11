@@ -46,6 +46,7 @@ features = Features(
         "modified_date": Value("timestamp[ns]"),
         "nsfw": ClassLabel(names=["no", "yes"]),
         "golden": ClassLabel(names=["no", "yes"]),
+        "gpt_alt_text": Value("string"),
     }
 )
 

@@ -188,25 +188,34 @@ async def get_single_image(request):
     else:
         data_split = None
 
-    def _transform(entry):
-        return {
-            "image_id": entry["image_id"],
-            "alt_text": entry["alt_text"],
-            "image_url": f"/images/{entry['image_id']}.png",
-            "thumbnail_url": f"/images/thumbnail/{entry['image_id']}.png",
-            "inclusive_alt_text": entry["inclusive_alt_text"],
-        }
-
     image = db.get_image(
         verified=verified,
         need_training=need_training,
         index=index,
-        transform=_transform,
+        transform=entry2json,
         split=data_split,
         username=username,
     )
 
     return web.json_response(image)
+
+
+def entry2json(entry):
+    return {
+        "image_id": entry["image_id"],
+        "alt_text": entry["alt_text"],
+        "image_url": f"/images/{entry['image_id']}.png",
+        "thumbnail_url": f"/images/thumbnail/{entry['image_id']}.png",
+        "inclusive_alt_text": entry["inclusive_alt_text"],
+        "nsfw": entry["nsfw"],
+        "golden": entry["golden"],
+        "verified": entry["verified"],
+        "need_training": entry["need_training"],
+        "rejection_reasons": entry["rejection_reasons"],
+        "verified_by": entry["verified_by"],
+        "added_by": entry["added_by"],
+        "gpt_alt_text": entry["gpt_alt_text"],
+    }
 
 
 @routes.get("/get_images")
@@ -234,22 +243,6 @@ async def get_random_images(request):
     batch_size = int(request.query.get("batch_size", 9))
     start = (batch - 1) * batch_size
 
-    def _transform(entry):
-        return {
-            "image_id": entry["image_id"],
-            "alt_text": entry["alt_text"],
-            "image_url": f"/images/{entry['image_id']}.png",
-            "thumbnail_url": f"/images/thumbnail/{entry['image_id']}.png",
-            "inclusive_alt_text": entry["inclusive_alt_text"],
-            "nsfw": entry["nsfw"],
-            "golden": entry["golden"],
-            "verified": entry["verified"],
-            "need_training": entry["need_training"],
-            "rejection_reasons": entry["rejection_reasons"],
-            "verified_by": entry["verified_by"],
-            "added_by": entry["added_by"],
-        }
-
     if username and username != "admin":
         data_split = get_user(username).get_data_split(db.size)
     elif username == "admin" and tab == "check" and user_id is not None:
@@ -262,7 +255,7 @@ async def get_random_images(request):
             verified=verified,
             need_training=need_training,
             start=start,
-            transform=_transform,
+            transform=entry2json,
             split=data_split,
             username=username,
             amount=batch_size,

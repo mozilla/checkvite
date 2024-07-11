@@ -689,7 +689,7 @@ export class ImageCaptionApp {
     const captionDiv = document.createElement("div");
     captionDiv.className = "caption-container";
 
-    const humanCaption = this.taggedText("Human text", imageData.alt_text);
+    const humanCaption = this.taggedText("GPT-4o Text", imageData.gpt_alt_text);
     captionDiv.appendChild(humanCaption);
 
     if (imageData.inclusive_alt_text !== "") {
@@ -732,6 +732,8 @@ export class ImageCaptionApp {
       captionInput.id = `caption${index}`;
       if (imageData.inclusive_alt_text !== "") {
         captionInput.value = imageData.inclusive_alt_text;
+      } else {
+        captionInput.value = imageData.gpt_alt_text;
       }
 
       form.appendChild(captionInput);
