@@ -180,6 +180,7 @@ async def get_single_image(request):
     index = int(request.query.get("index", 0))
     batch_size = int(request.query.get("batch_size", 9))
     index = (batch - 1) * batch_size + index
+    user_id = request.query.get("user_id", None)
 
     if username and username != "admin":
         data_split = get_user(username).get_data_split(db.size)
@@ -389,7 +390,7 @@ async def handle_upload(request):
         "golden": form_data.get("golden", False),
     }
     db.add_image(**entry)
-    raise web.HTTPFound(f"/?tab=to_verify&batch=1")
+    raise web.HTTPFound("/?tab=to_verify&batch=1")
 
 
 async def start_app(app):
