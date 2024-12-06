@@ -14,7 +14,7 @@ import jinja2
 
 from checkvite.db import Database
 
-SECRET_KEY = "nYzdi-LJ4aqGqvCF28Yt2kVpWiGrWniBFLAGLPtRcx4="
+SECRET_KEY = "DUMMY_KEY_CHANGE_ME"
 HERE = os.path.dirname(__file__)
 db = Database()
 routes = web.RouteTableDef()
